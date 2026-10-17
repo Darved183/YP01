@@ -1,2 +1,4 @@
 # YP01
-delete contributors2
+
+# build app
+go build -o bin/app.exe ./cmd/app
