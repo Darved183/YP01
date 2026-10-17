@@ -4,7 +4,8 @@ import (
 	"YP01/internal/config"
 	"YP01/internal/database"
 	"encoding/json"
-	"log"
+
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -20,9 +21,13 @@ type Status struct {
 
 func Run() error {
 
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	db, err := database.Load()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Error loading .env file", "error", err)
+		os.Exit(1)
 	}
 
 	defer db.Close()
@@ -38,9 +43,8 @@ func Run() error {
 		json.NewEncoder(w).Encode(components)
 	}).Methods("GET")
 	_, components := Health(db)
-	log.Println("Server is listening: " + Config.Addr)
-	json.NewEncoder(os.Stdout).Encode(components)
-	return http.ListenAndServe(":8181", router)
+	slog.Info("Server is listening", "addr", Config.Addr, "components", components)
+	return http.ListenAndServe(Config.Addr, router)
 }
 
 func Health(db *sqlx.DB) (int, map[string]interface{}) {
