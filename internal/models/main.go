@@ -1,5 +1,7 @@
 package Models
 
+import "time"
+
 type Product struct {
 	ID          string  `json:"id" db:"id"`
 	Name        string  `json:"name" db:"name"`
@@ -29,7 +31,7 @@ type User struct {
 	Name             string    `json:"name" db:"name"`
 	Email            string    `json:"email" db:"email"`
 	Phone            string    `json:"phone" db:"phone"`
-	Role             string    `json:"role" db:"role"`
+	RoleID           string    `json:"role_id" db:"role_id"`
 	RegistrationDate time.Time `json:"registration_date" db:"registration_date"`
 }
 
@@ -43,7 +45,7 @@ type Cart struct {
 type Order struct {
 	ID       string    `json:"id" db:"id"`
 	UserID   string    `json:"user_id" db:"user_id"`
-	DateTime string    `json:"date_time" db:"date_time"`
+	DateTime time.Time `json:"date_time" db:"date_time"`
 	Status   string    `json:"status" db:"status"`
 }
 

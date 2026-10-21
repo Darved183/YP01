@@ -3,8 +3,10 @@ package database
 import (
 	"strings"
 
+	"YP01/internal/models"
+
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	_ "modernc.org/sqlite"
 )
 
 type Repository struct {
@@ -15,9 +17,7 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{DB: db}
 }
 
-///
 // Product
-///
 
 type ProductFilter struct {
 	Page   int
@@ -32,349 +32,204 @@ type ProductFilter struct {
 	Order  string
 }
 
-func (r *Repository) CreateProduct(product *Product) error {
+func (r *Repository) CreateProduct(p *models.Product) error {
+	if p.ID == "" {
+		p.ID = uuid.NewString()
+	}
 	_, err := r.DB.NamedExec(`
-		INSERT INTO products (
-			name, type, gender, size, color,
-			description, brand, season, price
-		) VALUES (
-			:name, :type, :gender, :size, :color,
-			:description, :brand, :season, :price
-		)
-	`, product)
-
+		INSERT INTO products (id, name, type, gender, size, color, description, brand, season, price)
+		VALUES (:id, :name, :type, :gender, :size, :color, :description, :brand, :season, :price)
+	`, p)
 	return err
 }
 
-func (r *Repository) GetProducts(f ProductFilter) ([]Product, error) {
-	var products []Product
+func (r *Repository) GetProducts(f ProductFilter) ([]models.Product, error) {
+	var products []models.Product
+	query := `SELECT id, name, type, gender, size, color, description, brand, season, price FROM products WHERE 1=1`
+	args := []interface{}{}
 
-	query := `
-		SELECT id, name, type, gender, size, color,
-		       description, brand, season, price
-		FROM products
-		WHERE 1 = 1
-	`
-
-	args := make([]interface{}, 0)
-
-	if f.Type != "" {
-		query += " AND type = ?"
-		args = append(args, f.Type)
-	}
-
-	if f.Gender != "" {
-		query += " AND gender = ?"
-		args = append(args, f.Gender)
-	}
-
-	if f.Size != "" {
-		query += " AND size = ?"
-		args = append(args, f.Size)
-	}
-
-	if f.Color != "" {
-		query += " AND color = ?"
-		args = append(args, f.Color)
-	}
-
-	if f.Brand != "" {
-		query += " AND brand = ?"
-		args = append(args, f.Brand)
-	}
-
-	if f.Season != "" {
-		query += " AND season = ?"
-		args = append(args, f.Season)
-	}
+	if f.Type != ""   { query += " AND type = ?";   args = append(args, f.Type) }
+	if f.Gender != "" { query += " AND gender = ?"; args = append(args, f.Gender) }
+	if f.Size != ""   { query += " AND size = ?";   args = append(args, f.Size) }
+	if f.Color != ""  { query += " AND color = ?";  args = append(args, f.Color) }
+	if f.Brand != ""  { query += " AND brand = ?";  args = append(args, f.Brand) }
+	if f.Season != "" { query += " AND season = ?"; args = append(args, f.Season) }
 
 	if strings.EqualFold(f.Sort, "price") {
 		order := "ASC"
-
 		if strings.EqualFold(f.Order, "desc") {
 			order = "DESC"
 		}
-
 		query += " ORDER BY price " + order
 	} else {
 		query += " ORDER BY id ASC"
 	}
 
-	offset := (f.Page - 1) * f.Limit
-
+	if f.Page < 1 { f.Page = 1 }
+	if f.Limit < 1 { f.Limit = 10 }
 	query += " LIMIT ? OFFSET ?"
-	args = append(args, f.Limit, offset)
+	args = append(args, f.Limit, (f.Page-1)*f.Limit)
 
 	err := r.DB.Select(&products, query, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	return products, nil
+	return products, err
 }
 
-func (r *Repository) GetIdProduct(id int) (*Product, error) {
-	var product Product
-
-	err := r.DB.Get(
-		&product,
-		"SELECT * FROM products WHERE id = ?",
-		id,
-	)
-	if err != nil {
+func (r *Repository) GetProductByID(id string) (*models.Product, error) {
+	var p models.Product
+	if err := r.DB.Get(&p, `SELECT * FROM products WHERE id = ?`, id); err != nil {
 		return nil, err
 	}
-
-	return &product, nil
+	return &p, nil
 }
 
-func (r *Repository) PutProduct(product *Product) error {
+func (r *Repository) PutProduct(p *models.Product) error {
 	_, err := r.DB.NamedExec(`
 		UPDATE products SET
-			name = :name,
-			type = :type,
-			gender = :gender,
-			size = :size,
-			color = :color,
-			description = :description,
-			brand = :brand,
-			season = :season,
-			price = :price
+			name = :name, type = :type, gender = :gender, size = :size,
+			color = :color, description = :description, brand = :brand,
+			season = :season, price = :price
 		WHERE id = :id
-	`, product)
-
+	`, p)
 	return err
 }
 
-func (r *Repository) DeleteProduct(id int) error {
-	_, err := r.DB.Exec(
-		"DELETE FROM products WHERE id = ?",
-		id,
-	)
-
+func (r *Repository) DeleteProduct(id string) error {
+	_, err := r.DB.Exec(`DELETE FROM products WHERE id = ?`, id)
 	return err
 }
 
-///
 // Photo
-///
 
-func (r *Repository) CreatePhoto(photo *Photo) error {
+func (r *Repository) CreatePhoto(p *models.Photo) error {
+	if p.ID == "" {
+		p.ID = uuid.NewString()
+	}
 	_, err := r.DB.NamedExec(`
-		INSERT INTO photos (product_id, url)
-		VALUES (:product_id, :url)
-	`, photo)
-
+		INSERT INTO photos (id, filename, product_id) VALUES (:id, :filename, :product_id)
+	`, p)
 	return err
 }
 
-func (r *Repository) GetPhoto(id int) (*Photo, error) {
-	var photo Photo
-
-	err := r.DB.Get(
-		&photo,
-		"SELECT * FROM photos WHERE id = ?",
-		id,
-	)
-	if err != nil {
+func (r *Repository) GetPhoto(id string) (*models.Photo, error) {
+	var p models.Photo
+	if err := r.DB.Get(&p, `SELECT * FROM photos WHERE id = ?`, id); err != nil {
 		return nil, err
 	}
-
-	return &photo, nil
+	return &p, nil
 }
 
-func (r *Repository) DeletePhoto(id int) error {
-	_, err := r.DB.Exec(
-		"DELETE FROM photos WHERE id = ?",
-		id,
-	)
-
+func (r *Repository) DeletePhoto(id string) error {
+	_, err := r.DB.Exec(`DELETE FROM photos WHERE id = ?`, id)
 	return err
 }
 
-///
 // Role
-///
 
-func (r *Repository) CreateRole(role *Role) error {
-	_, err := r.DB.NamedExec(`
-		INSERT INTO roles (name, description)
-		VALUES (:name, :description)
-	`, role)
-
-	return err
-}
-
-func (r *Repository) GetRoles() ([]Role, error) {
-	var roles []Role
-
-	err := r.DB.Select(
-		&roles,
-		"SELECT * FROM roles ORDER BY id ASC",
-	)
-	if err != nil {
-		return nil, err
+func (r *Repository) CreateRole(role *models.Role) error {
+	if role.ID == "" {
+		role.ID = uuid.NewString()
 	}
-
-	return roles, nil
-}
-
-func (r *Repository) PutRole(role *Role) error {
-	_, err := r.DB.NamedExec(`
-		UPDATE roles SET
-			name = :name,
-			description = :description
-		WHERE id = :id
-	`, role)
-
+	_, err := r.DB.NamedExec(`INSERT INTO roles (id, name) VALUES (:id, :name)`, role)
 	return err
 }
 
-func (r *Repository) DeleteRole(id int) error {
-	_, err := r.DB.Exec(
-		"DELETE FROM roles WHERE id = ?",
-		id,
-	)
+func (r *Repository) GetRoles() ([]models.Role, error) {
+	var roles []models.Role
+	err := r.DB.Select(&roles, `SELECT * FROM roles ORDER BY id ASC`)
+	return roles, err
+}
 
+func (r *Repository) PutRole(role *models.Role) error {
+	_, err := r.DB.NamedExec(`UPDATE roles SET name = :name WHERE id = :id`, role)
 	return err
 }
 
-///
+func (r *Repository) DeleteRole(id string) error {
+	_, err := r.DB.Exec(`DELETE FROM roles WHERE id = ?`, id)
+	return err
+}
+
 // User
-///
 
 type UserFilter struct {
 	Page  int
 	Limit int
 }
 
-func (r *Repository) CreateUser(user *User) error {
+func (r *Repository) CreateUser(u *models.User) error {
+	if u.ID == "" {
+		u.ID = uuid.NewString()
+	}
 	_, err := r.DB.NamedExec(`
-		INSERT INTO users (
-			username, email, password, role_id
-		) VALUES (
-			:username, :email, :password, :role_id
-		)
-	`, user)
-
+		INSERT INTO users (id, name, email, phone, role_id, registration_date)
+		VALUES (:id, :name, :email, :phone, :role_id, :registration_date)
+	`, u)
 	return err
 }
 
-func (r *Repository) GetUsers(f UserFilter) ([]User, error) {
-	var users []User
-
-	if f.Page < 1 {
-		f.Page = 1
-	}
-
-	if f.Limit < 1 {
-		f.Limit = 10
-	}
-
-	offset := (f.Page - 1) * f.Limit
-
-	err := r.DB.Select(
-		&users,
-		"SELECT * FROM users ORDER BY id ASC LIMIT ? OFFSET ?",
-		f.Limit,
-		offset,
+func (r *Repository) GetUsers(f UserFilter) ([]models.User, error) {
+	if f.Page < 1 { f.Page = 1 }
+	if f.Limit < 1 { f.Limit = 10 }
+	var users []models.User
+	err := r.DB.Select(&users,
+		`SELECT * FROM users ORDER BY registration_date ASC LIMIT ? OFFSET ?`,
+		f.Limit, (f.Page-1)*f.Limit,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	return users, nil
+	return users, err
 }
 
-func (r *Repository) GetUsersByRole(roleID int) ([]User, error) {
-	var users []User
-
-	err := r.DB.Select(
-		&users,
-		"SELECT * FROM users WHERE role_id = ? ORDER BY id ASC",
-		roleID,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return users, nil
+func (r *Repository) GetUsersByRole(roleID string) ([]models.User, error) {
+	var users []models.User
+	err := r.DB.Select(&users, `SELECT * FROM users WHERE role_id = ? ORDER BY registration_date ASC`, roleID)
+	return users, err
 }
 
-func (r *Repository) PutUser(user *User) error {
+func (r *Repository) PutUser(u *models.User) error {
 	_, err := r.DB.NamedExec(`
 		UPDATE users SET
-			username = :username,
-			email = :email,
-			password = :password,
-			role_id = :role_id
+			name = :name, email = :email, phone = :phone,
+			role_id = :role_id, registration_date = :registration_date
 		WHERE id = :id
-	`, user)
-
+	`, u)
 	return err
 }
 
-func (r *Repository) DeleteUser(id int) error {
-	_, err := r.DB.Exec(
-		"DELETE FROM users WHERE id = ?",
-		id,
-	)
-
+func (r *Repository) DeleteUser(id string) error {
+	_, err := r.DB.Exec(`DELETE FROM users WHERE id = ?`, id)
 	return err
 }
 
-///
 // Cart
-///
 
-func (r *Repository) CreateCart(cart *Cart) error {
-	_, err := r.DB.NamedExec(`
-		INSERT INTO cart (user_id, product_id, quantity)
-		VALUES (:user_id, :product_id, :quantity)
-	`, cart)
-
-	return err
-}
-
-func (r *Repository) GetCartByUser(userID int) ([]Cart, error) {
-	var carts []Cart
-
-	err := r.DB.Select(
-		&carts,
-		"SELECT * FROM cart WHERE user_id = ? ORDER BY id ASC",
-		userID,
-	)
-	if err != nil {
-		return nil, err
+func (r *Repository) CreateCart(c *models.Cart) error {
+	if c.ID == "" {
+		c.ID = uuid.NewString()
 	}
-
-	return carts, nil
-}
-
-func (r *Repository) PutCart(cart *Cart) error {
 	_, err := r.DB.NamedExec(`
-		UPDATE cart SET
-			user_id = :user_id,
-			product_id = :product_id,
-			quantity = :quantity
-		WHERE id = :id
-	`, cart)
-
+		INSERT INTO cart (id, user_id, product_id, count) VALUES (:id, :user_id, :product_id, :count)
+	`, c)
 	return err
 }
 
-func (r *Repository) DeleteCart(id int) error {
-	_, err := r.DB.Exec(
-		"DELETE FROM cart WHERE id = ?",
-		id,
-	)
+func (r *Repository) GetCartByUser(userID string) ([]models.Cart, error) {
+	var carts []models.Cart
+	err := r.DB.Select(&carts, `SELECT * FROM cart WHERE user_id = ? ORDER BY id ASC`, userID)
+	return carts, err
+}
 
+func (r *Repository) PutCart(c *models.Cart) error {
+	_, err := r.DB.NamedExec(`
+		UPDATE cart SET user_id = :user_id, product_id = :product_id, count = :count WHERE id = :id
+	`, c)
 	return err
 }
 
-///
+func (r *Repository) DeleteCart(id string) error {
+	_, err := r.DB.Exec(`DELETE FROM cart WHERE id = ?`, id)
+	return err
+}
+
 // Order
-///
 
 type OrderFilter struct {
 	Page      int
@@ -384,114 +239,66 @@ type OrderFilter struct {
 	EndDate   string
 }
 
-func (r *Repository) CreateOrder(order *Order) error {
+func (r *Repository) CreateOrder(o *models.Order) error {
+	if o.ID == "" {
+		o.ID = uuid.NewString()
+	}
 	_, err := r.DB.NamedExec(`
-		INSERT INTO orders (user_id, status, total, created_at)
-		VALUES (:user_id, :status, :total, :created_at)
-	`, order)
-
+		INSERT INTO orders (id, user_id, date_time, status) VALUES (:id, :user_id, :date_time, :status)
+	`, o)
 	return err
 }
 
-func (r *Repository) GetOrders(f OrderFilter) ([]Order, error) {
-	var orders []Order
+func (r *Repository) GetOrders(f OrderFilter) ([]models.Order, error) {
+	var orders []models.Order
+	query := `SELECT * FROM orders WHERE 1=1`
+	args := []interface{}{}
 
-	query := "SELECT * FROM orders WHERE 1 = 1"
-	args := make([]interface{}, 0)
+	if f.Status != ""    { query += " AND status = ?";    args = append(args, f.Status) }
+	if f.StartDate != "" { query += " AND date_time >= ?"; args = append(args, f.StartDate) }
+	if f.EndDate != ""   { query += " AND date_time <= ?"; args = append(args, f.EndDate) }
 
-	if f.Status != "" {
-		query += " AND status = ?"
-		args = append(args, f.Status)
-	}
+	query += " ORDER BY date_time DESC"
 
-	if f.StartDate != "" {
-		query += " AND created_at >= ?"
-		args = append(args, f.StartDate)
-	}
-
-	if f.EndDate != "" {
-		query += " AND created_at <= ?"
-		args = append(args, f.EndDate)
-	}
-
-	query += " ORDER BY created_at DESC"
-
-	if f.Page < 1 {
-		f.Page = 1
-	}
-
-	if f.Limit < 1 {
-		f.Limit = 10
-	}
-
-	offset := (f.Page - 1) * f.Limit
-
+	if f.Page < 1 { f.Page = 1 }
+	if f.Limit < 1 { f.Limit = 10 }
 	query += " LIMIT ? OFFSET ?"
-	args = append(args, f.Limit, offset)
+	args = append(args, f.Limit, (f.Page-1)*f.Limit)
 
 	err := r.DB.Select(&orders, query, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	return orders, nil
+	return orders, err
 }
 
-func (r *Repository) GetOrder(id int) (*Order, error) {
-	var order Order
-
-	err := r.DB.Get(
-		&order,
-		"SELECT * FROM orders WHERE id = ?",
-		id,
-	)
-	if err != nil {
+func (r *Repository) GetOrder(id string) (*models.Order, error) {
+	var o models.Order
+	if err := r.DB.Get(&o, `SELECT * FROM orders WHERE id = ?`, id); err != nil {
 		return nil, err
 	}
-
-	return &order, nil
+	return &o, nil
 }
 
-func (r *Repository) PutOrder(order *Order) error {
+func (r *Repository) PutOrder(o *models.Order) error {
 	_, err := r.DB.NamedExec(`
-		UPDATE orders SET
-			user_id = :user_id,
-			status = :status,
-			total = :total,
-			created_at = :created_at
-		WHERE id = :id
-	`, order)
-
+		UPDATE orders SET user_id = :user_id, date_time = :date_time, status = :status WHERE id = :id
+	`, o)
 	return err
 }
 
-///
-// Order Item
-///
+// OrderItem
 
-func (r *Repository) CreateOrderItem(item *OrderItem) error {
+func (r *Repository) CreateOrderItem(i *models.OrderItem) error {
+	if i.ID == "" {
+		i.ID = uuid.NewString()
+	}
 	_, err := r.DB.NamedExec(`
-		INSERT INTO order_items (
-			order_id, product_id, quantity, price
-		) VALUES (
-			:order_id, :product_id, :quantity, :price
-		)
-	`, item)
-
+		INSERT INTO order_items (id, order_id, product_id, price)
+		VALUES (:id, :order_id, :product_id, :price)
+	`, i)
 	return err
 }
 
-func (r *Repository) GetOrderItems(orderID int) ([]OrderItem, error) {
-	var items []OrderItem
-
-	err := r.DB.Select(
-		&items,
-		"SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC",
-		orderID,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return items, nil
+func (r *Repository) GetOrderItems(orderID string) ([]models.OrderItem, error) {
+	var items []models.OrderItem
+	err := r.DB.Select(&items, `SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC`, orderID)
+	return items, err
 }
