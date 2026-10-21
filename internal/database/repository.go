@@ -32,7 +32,7 @@ type ProductFilter struct {
 	Order  string
 }
 
-func (r *Repository) CreateProduct(p *models.Product) error {
+func (r *Repository) CreateProduct(p *Models.Product) error {
 	if p.ID == "" {
 		p.ID = uuid.NewString()
 	}
@@ -43,8 +43,8 @@ func (r *Repository) CreateProduct(p *models.Product) error {
 	return err
 }
 
-func (r *Repository) GetProducts(f ProductFilter) ([]models.Product, error) {
-	var products []models.Product
+func (r *Repository) GetProducts(f ProductFilter) ([]Models.Product, error) {
+	var products []Models.Product
 	query := `SELECT id, name, type, gender, size, color, description, brand, season, price FROM products WHERE 1=1`
 	args := []interface{}{}
 
@@ -74,15 +74,15 @@ func (r *Repository) GetProducts(f ProductFilter) ([]models.Product, error) {
 	return products, err
 }
 
-func (r *Repository) GetProductByID(id string) (*models.Product, error) {
-	var p models.Product
+func (r *Repository) GetProductByID(id string) (*Models.Product, error) {
+	var p Models.Product
 	if err := r.DB.Get(&p, `SELECT * FROM products WHERE id = ?`, id); err != nil {
 		return nil, err
 	}
 	return &p, nil
 }
 
-func (r *Repository) PutProduct(p *models.Product) error {
+func (r *Repository) PutProduct(p *Models.Product) error {
 	_, err := r.DB.NamedExec(`
 		UPDATE products SET
 			name = :name, type = :type, gender = :gender, size = :size,
@@ -100,7 +100,7 @@ func (r *Repository) DeleteProduct(id string) error {
 
 // Photo
 
-func (r *Repository) CreatePhoto(p *models.Photo) error {
+func (r *Repository) CreatePhoto(p *Models.Photo) error {
 	if p.ID == "" {
 		p.ID = uuid.NewString()
 	}
@@ -110,8 +110,8 @@ func (r *Repository) CreatePhoto(p *models.Photo) error {
 	return err
 }
 
-func (r *Repository) GetPhoto(id string) (*models.Photo, error) {
-	var p models.Photo
+func (r *Repository) GetPhoto(id string) (*Models.Photo, error) {
+	var p Models.Photo
 	if err := r.DB.Get(&p, `SELECT * FROM photos WHERE id = ?`, id); err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (r *Repository) DeletePhoto(id string) error {
 
 // Role
 
-func (r *Repository) CreateRole(role *models.Role) error {
+func (r *Repository) CreateRole(role *Models.Role) error {
 	if role.ID == "" {
 		role.ID = uuid.NewString()
 	}
@@ -133,13 +133,13 @@ func (r *Repository) CreateRole(role *models.Role) error {
 	return err
 }
 
-func (r *Repository) GetRoles() ([]models.Role, error) {
-	var roles []models.Role
+func (r *Repository) GetRoles() ([]Models.Role, error) {
+	var roles []Models.Role
 	err := r.DB.Select(&roles, `SELECT * FROM roles ORDER BY id ASC`)
 	return roles, err
 }
 
-func (r *Repository) PutRole(role *models.Role) error {
+func (r *Repository) PutRole(role *Models.Role) error {
 	_, err := r.DB.NamedExec(`UPDATE roles SET name = :name WHERE id = :id`, role)
 	return err
 }
@@ -156,7 +156,7 @@ type UserFilter struct {
 	Limit int
 }
 
-func (r *Repository) CreateUser(u *models.User) error {
+func (r *Repository) CreateUser(u *Models.User) error {
 	if u.ID == "" {
 		u.ID = uuid.NewString()
 	}
@@ -167,10 +167,10 @@ func (r *Repository) CreateUser(u *models.User) error {
 	return err
 }
 
-func (r *Repository) GetUsers(f UserFilter) ([]models.User, error) {
+func (r *Repository) GetUsers(f UserFilter) ([]Models.User, error) {
 	if f.Page < 1 { f.Page = 1 }
 	if f.Limit < 1 { f.Limit = 10 }
-	var users []models.User
+	var users []Models.User
 	err := r.DB.Select(&users,
 		`SELECT * FROM users ORDER BY registration_date ASC LIMIT ? OFFSET ?`,
 		f.Limit, (f.Page-1)*f.Limit,
@@ -178,13 +178,13 @@ func (r *Repository) GetUsers(f UserFilter) ([]models.User, error) {
 	return users, err
 }
 
-func (r *Repository) GetUsersByRole(roleID string) ([]models.User, error) {
-	var users []models.User
+func (r *Repository) GetUsersByRole(roleID string) ([]Models.User, error) {
+	var users []Models.User
 	err := r.DB.Select(&users, `SELECT * FROM users WHERE role_id = ? ORDER BY registration_date ASC`, roleID)
 	return users, err
 }
 
-func (r *Repository) PutUser(u *models.User) error {
+func (r *Repository) PutUser(u *Models.User) error {
 	_, err := r.DB.NamedExec(`
 		UPDATE users SET
 			name = :name, email = :email, phone = :phone,
@@ -201,7 +201,7 @@ func (r *Repository) DeleteUser(id string) error {
 
 // Cart
 
-func (r *Repository) CreateCart(c *models.Cart) error {
+func (r *Repository) CreateCart(c *Models.Cart) error {
 	if c.ID == "" {
 		c.ID = uuid.NewString()
 	}
@@ -211,13 +211,13 @@ func (r *Repository) CreateCart(c *models.Cart) error {
 	return err
 }
 
-func (r *Repository) GetCartByUser(userID string) ([]models.Cart, error) {
-	var carts []models.Cart
+func (r *Repository) GetCartByUser(userID string) ([]Models.Cart, error) {
+	var carts []Models.Cart
 	err := r.DB.Select(&carts, `SELECT * FROM cart WHERE user_id = ? ORDER BY id ASC`, userID)
 	return carts, err
 }
 
-func (r *Repository) PutCart(c *models.Cart) error {
+func (r *Repository) PutCart(c *Models.Cart) error {
 	_, err := r.DB.NamedExec(`
 		UPDATE cart SET user_id = :user_id, product_id = :product_id, count = :count WHERE id = :id
 	`, c)
@@ -239,7 +239,7 @@ type OrderFilter struct {
 	EndDate   string
 }
 
-func (r *Repository) CreateOrder(o *models.Order) error {
+func (r *Repository) CreateOrder(o *Models.Order) error {
 	if o.ID == "" {
 		o.ID = uuid.NewString()
 	}
@@ -249,8 +249,8 @@ func (r *Repository) CreateOrder(o *models.Order) error {
 	return err
 }
 
-func (r *Repository) GetOrders(f OrderFilter) ([]models.Order, error) {
-	var orders []models.Order
+func (r *Repository) GetOrders(f OrderFilter) ([]Models.Order, error) {
+	var orders []Models.Order
 	query := `SELECT * FROM orders WHERE 1=1`
 	args := []interface{}{}
 
@@ -269,15 +269,15 @@ func (r *Repository) GetOrders(f OrderFilter) ([]models.Order, error) {
 	return orders, err
 }
 
-func (r *Repository) GetOrder(id string) (*models.Order, error) {
-	var o models.Order
+func (r *Repository) GetOrder(id string) (*Models.Order, error) {
+	var o Models.Order
 	if err := r.DB.Get(&o, `SELECT * FROM orders WHERE id = ?`, id); err != nil {
 		return nil, err
 	}
 	return &o, nil
 }
 
-func (r *Repository) PutOrder(o *models.Order) error {
+func (r *Repository) PutOrder(o *Models.Order) error {
 	_, err := r.DB.NamedExec(`
 		UPDATE orders SET user_id = :user_id, date_time = :date_time, status = :status WHERE id = :id
 	`, o)
@@ -286,7 +286,7 @@ func (r *Repository) PutOrder(o *models.Order) error {
 
 // OrderItem
 
-func (r *Repository) CreateOrderItem(i *models.OrderItem) error {
+func (r *Repository) CreateOrderItem(i *Models.OrderItem) error {
 	if i.ID == "" {
 		i.ID = uuid.NewString()
 	}
@@ -297,8 +297,8 @@ func (r *Repository) CreateOrderItem(i *models.OrderItem) error {
 	return err
 }
 
-func (r *Repository) GetOrderItems(orderID string) ([]models.OrderItem, error) {
-	var items []models.OrderItem
+func (r *Repository) GetOrderItems(orderID string) ([]Models.OrderItem, error) {
+	var items []Models.OrderItem
 	err := r.DB.Select(&items, `SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC`, orderID)
 	return items, err
 }
