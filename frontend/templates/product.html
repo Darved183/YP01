@@ -2,12 +2,39 @@
 <div class="product">
   <div>
     {{if .HasFile}}
-      <div class="gallery">
-        {{range .Photos}}
-          {{if .HasFile}}
-            <a href="/picture/{{.ID}}"><img class="shot" alt="{{$.Product.Name}}" src="/photo/{{.ID}}"></a>
+      <div class="gallery" data-gallery>
+        <div class="stage">
+          {{if gt (len .Photos) 1}}
+            <button class="gal-btn prev" type="button" data-prev aria-label="Предыдущее фото">‹</button>
+            <button class="gal-btn next" type="button" data-next aria-label="Следующее фото">›</button>
           {{end}}
+          <div class="film" data-film>
+            {{range $i, $p := .Photos}}
+              <button class="slide" type="button" data-open="{{$i}}">
+                <img class="shot" alt="{{$.Product.Name}}" src="/photo/{{$p.ID}}">
+              </button>
+            {{end}}
+          </div>
+        </div>
+        {{if gt (len .Photos) 1}}
+          <div class="dots">
+            {{range $i, $p := .Photos}}
+              <button type="button" data-go="{{$i}}" aria-label="Фото {{$i}}"{{if eq $i 0}} class="on"{{end}}></button>
+            {{end}}
+          </div>
         {{end}}
+      </div>
+      <div class="viewer" data-viewer hidden>
+        <button class="viewer-close" type="button" data-close>Закрыть</button>
+        {{if gt (len .Photos) 1}}
+          <button class="gal-btn prev" type="button" data-vprev aria-label="Предыдущее фото">‹</button>
+          <button class="gal-btn next" type="button" data-vnext aria-label="Следующее фото">›</button>
+        {{end}}
+        <div class="viewer-film" data-vfilm>
+          {{range .Photos}}
+            <img alt="{{$.Product.Name}}" src="/photo/{{.ID}}">
+          {{end}}
+        </div>
       </div>
     {{else}}
       <div class="swatch{{if light .Product.Color}} light{{end}}" style="--c:{{color .Product.Color}}"><span>{{.Product.Brand}}</span></div>
@@ -58,4 +85,61 @@
     {{end}}
   </div>
 </div>
+{{if .HasFile}}
+<script>
+(function () {
+  var root = document.querySelector("[data-gallery]");
+  var viewer = document.querySelector("[data-viewer]");
+  if (!root || !viewer) return;
+  var film = root.querySelector("[data-film]");
+  var vfilm = viewer.querySelector("[data-vfilm]");
+  var dots = root.querySelectorAll("[data-go]");
+
+  function index(box) {
+    var w = box.clientWidth || 1;
+    return Math.round(box.scrollLeft / w);
+  }
+  function go(box, n) {
+    var slides = box.children;
+    if (!slides.length) return 0;
+    n = (n + slides.length) % slides.length;
+    box.scrollTo({ left: slides[n].offsetLeft, behavior: "smooth" });
+    return n;
+  }
+  function mark(n) {
+    dots.forEach(function (dot, i) { dot.classList.toggle("on", i === n); });
+  }
+  root.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-prev],[data-next],[data-go],[data-open]");
+    if (!t) return;
+    if (t.hasAttribute("data-open")) {
+      var at = +t.getAttribute("data-open");
+      viewer.hidden = false;
+      mark(at);
+      requestAnimationFrame(function () { go(vfilm, at); });
+      return;
+    }
+    var n = index(film);
+    if (t.hasAttribute("data-prev")) n = go(film, n - 1);
+    if (t.hasAttribute("data-next")) n = go(film, n + 1);
+    if (t.hasAttribute("data-go")) n = go(film, +t.getAttribute("data-go"));
+    mark(n);
+  });
+  film.addEventListener("scroll", function () { mark(index(film)); });
+  viewer.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-vprev],[data-vnext],[data-close]");
+    if (t && t.hasAttribute("data-close")) viewer.hidden = true;
+    if (t && t.hasAttribute("data-vprev")) go(vfilm, index(vfilm) - 1);
+    if (t && t.hasAttribute("data-vnext")) go(vfilm, index(vfilm) + 1);
+    if (e.target === viewer) viewer.hidden = true;
+  });
+  document.addEventListener("keydown", function (e) {
+    if (viewer.hidden) return;
+    if (e.key === "Escape") viewer.hidden = true;
+    if (e.key === "ArrowLeft") go(vfilm, index(vfilm) - 1);
+    if (e.key === "ArrowRight") go(vfilm, index(vfilm) + 1);
+  });
+})();
+</script>
+{{end}}
 {{end}}

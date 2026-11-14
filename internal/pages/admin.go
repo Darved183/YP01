@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -49,8 +48,8 @@ func (s *Pages) AdminProducts(w http.ResponseWriter, r *http.Request) {
 	p.Pages = pageCount(total, f.Limit)
 	p.RangeText = rangeText(f.Page, f.Limit, total)
 	p.PagePath = "/admin/products"
-	p.PrevQ = withPage(url.Values{}, f.Page-1)
-	p.NextQ = withPage(url.Values{}, f.Page+1)
+	p.PrevPage = f.Page - 1
+	p.NextPage = f.Page + 1
 	s.render(w, "products", p)
 }
 
@@ -397,16 +396,13 @@ func (s *Pages) AdminUsers(w http.ResponseWriter, r *http.Request) {
 		}
 		p.Users = append(p.Users, row)
 	}
-	keep := url.Values{}
-	if p.RoleID != "" {
-		keep.Set("role", p.RoleID)
-	}
+	p.Keep = keepQuery{Role: p.RoleID}
 	p.Page = f.Page
 	p.Pages = pageCount(total, f.Limit)
 	p.RangeText = rangeText(f.Page, f.Limit, total)
 	p.PagePath = "/admin/users"
-	p.PrevQ = withPage(keep, f.Page-1)
-	p.NextQ = withPage(keep, f.Page+1)
+	p.PrevPage = f.Page - 1
+	p.NextPage = f.Page + 1
 	s.render(w, "users", p)
 }
 

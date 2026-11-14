@@ -29,7 +29,9 @@ type page struct {
 	Cards                  []card
 	RangeText              string
 	Page, Pages            int
-	PagePath, PrevQ, NextQ string
+	PagePath               string
+	PrevPage, NextPage     int
+	Keep                   keepQuery
 
 	Product   *models.Product
 	Photos    []photoCard
@@ -286,17 +288,12 @@ func rangeText(page, limit, total int) string {
 	return fmt.Sprintf("Показано %d–%d из %d", from, to, total)
 }
 
-func withPage(v url.Values, page int) string {
-	c := url.Values{}
-	for k, vals := range v {
-		c[k] = append([]string(nil), vals...)
-	}
-	if page > 1 {
-		c.Set("page", strconv.Itoa(page))
-	} else {
-		c.Del("page")
-	}
-	return c.Encode()
+// Фильтры, которые надо сохранить при переходе на другую страницу.
+// В шаблоне имя параметра написано текстом: если склеить «page=2» заранее,
+// html прячет знак «=» и ссылка «Дальше» не меняет страницу.
+type keepQuery struct {
+	Type, Gender, Size, Color, Brand, Season, Sort string
+	Role, Status, From, To                         string
 }
 
 func money(v float64) string {

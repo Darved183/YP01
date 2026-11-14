@@ -2,7 +2,6 @@ package pages
 
 import (
 	"net/http"
-	"net/url"
 
 	"YP01/internal/database"
 	"YP01/internal/models"
@@ -42,7 +41,6 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 		{"type", "Тип"}, {"gender", "Пол"}, {"size", "Размер"},
 		{"color", "Цвет"}, {"brand", "Бренд"}, {"season", "Сезон"},
 	}
-	keep := url.Values{}
 	for _, item := range labels {
 		values, err := s.Repo.ProductField(item.key)
 		if err != nil {
@@ -53,12 +51,10 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 		p.Fields = append(p.Fields, filterField{
 			Key: item.key, Label: item.label, Current: cur, Options: sortOptions(item.key, values),
 		})
-		if cur != "" {
-			keep.Set(item.key, cur)
-		}
 	}
-	if p.Sort != "" {
-		keep.Set("sort", p.Sort)
+	p.Keep = keepQuery{
+		Type: f.Type, Gender: f.Gender, Size: f.Size, Color: f.Color,
+		Brand: f.Brand, Season: f.Season, Sort: p.Sort,
 	}
 	total, err := s.Repo.CountProducts(f)
 	if err != nil {
@@ -77,8 +73,8 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 	p.Pages = pageCount(total, f.Limit)
 	p.RangeText = rangeText(f.Page, f.Limit, total)
 	p.PagePath = "/catalog"
-	p.PrevQ = withPage(keep, f.Page-1)
-	p.NextQ = withPage(keep, f.Page+1)
+	p.PrevPage = f.Page - 1
+	p.NextPage = f.Page + 1
 	s.render(w, "catalog", p)
 }
 
@@ -120,13 +116,12 @@ func (s *Pages) Product(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, photo := range photos {
-		card := photoCard{ID: photo.ID, Filename: photo.Filename, HasFile: fileExists(photo.Filename)}
-		p.Photos = append(p.Photos, card)
-		if p.Photo == nil && card.HasFile {
-			p.Photo = &photo
-			p.HasFile = true
+		if !fileExists(photo.Filename) {
+			continue
 		}
+		p.Photos = append(p.Photos, photoCard{ID: photo.ID, Filename: photo.Filename, HasFile: true})
 	}
+	p.HasFile = len(p.Photos) > 0
 	s.render(w, "product", p)
 }
 

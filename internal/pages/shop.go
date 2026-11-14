@@ -3,7 +3,6 @@ package pages
 import (
 	"database/sql"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -351,22 +350,13 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 		}
 		p.Orders = append(p.Orders, row)
 	}
-	keep := url.Values{}
-	if p.Status != "" {
-		keep.Set("status", p.Status)
-	}
-	if p.From != "" {
-		keep.Set("from", p.From)
-	}
-	if p.To != "" {
-		keep.Set("to", p.To)
-	}
+	p.Keep = keepQuery{Status: p.Status, From: p.From, To: p.To}
 	p.Page = f.Page
 	p.Pages = pageCount(total, f.Limit)
 	p.RangeText = rangeText(f.Page, f.Limit, total)
 	p.PagePath = "/orders"
-	p.PrevQ = withPage(keep, f.Page-1)
-	p.NextQ = withPage(keep, f.Page+1)
+	p.PrevPage = f.Page - 1
+	p.NextPage = f.Page + 1
 	s.render(w, "orders", p)
 }
 
