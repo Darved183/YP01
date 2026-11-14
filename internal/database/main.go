@@ -71,5 +71,22 @@ func Load() (*sqlx.DB, error) {
 		return nil, err
 	}
 
+	if err = ensurePassword(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = ensureStock(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = ensureComment(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = SeedIfEmpty(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+
 	return db, nil
 }
