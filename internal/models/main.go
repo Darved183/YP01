@@ -1,6 +1,4 @@
-package Models
-
-import "time"
+package models
 
 type Product struct {
 	ID          string  `json:"id" db:"id"`
@@ -13,6 +11,7 @@ type Product struct {
 	Brand       string  `json:"brand" db:"brand"`
 	Season      string  `json:"season" db:"season"`
 	Price       float64 `json:"price" db:"price"`
+	Stock       int     `json:"stock" db:"stock"`
 }
 
 type Photo struct {
@@ -27,12 +26,13 @@ type Role struct {
 }
 
 type User struct {
-	ID               string    `json:"id" db:"id"`
-	Name             string    `json:"name" db:"name"`
-	Email            string    `json:"email" db:"email"`
-	Phone            string    `json:"phone" db:"phone"`
-	RoleID           string    `json:"role_id" db:"role_id"`
-	RegistrationDate time.Time `json:"registration_date" db:"registration_date"`
+	ID               string `json:"id" db:"id"`
+	Name             string `json:"name" db:"name"`
+	Email            string `json:"email" db:"email"`
+	Phone            string `json:"phone" db:"phone"`
+	RoleID           string `json:"role_id" db:"role_id"`
+	RegistrationDate string `json:"registration_date" db:"registration_date"`
+	Password         string `json:"-" db:"password"`
 }
 
 type Cart struct {
@@ -43,10 +43,11 @@ type Cart struct {
 }
 
 type Order struct {
-	ID       string    `json:"id" db:"id"`
-	UserID   string    `json:"user_id" db:"user_id"`
-	DateTime time.Time `json:"date_time" db:"date_time"`
-	Status   string    `json:"status" db:"status"`
+	ID       string `json:"id" db:"id"`
+	UserID   string `json:"user_id" db:"user_id"`
+	DateTime string `json:"date_time" db:"date_time"`
+	Status   string `json:"status" db:"status"`
+	Comment  string `json:"comment" db:"comment"`
 }
 
 type OrderItem struct {

@@ -3,21 +3,15 @@ package app
 import (
 	"YP01/internal/config"
 	"YP01/internal/database"
-	"encoding/json"
+	"YP01/internal/handlers"
+	"YP01/internal/pages"
 
 	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/gorilla/mux"
-	"github.com/jmoiron/sqlx"
 )
-
-type Status struct {
-	Name   string `json:"name"`
-	Health bool   `json:"health"`
-	Error  string `json:"error"`
-}
 
 func Run() error {
 
@@ -29,47 +23,51 @@ func Run() error {
 		slog.Error("Error loading .env file", "error", err)
 		os.Exit(1)
 	}
-
 	defer db.Close()
-
-	Config := config.Load()
 
 	router := mux.NewRouter()
 
+	Config := config.Load()
+
+	repo := database.NewRepository(db)
+
+	productH := &handlers.ProductHandler{Repo: repo}
+	productH.Register(router)
+
+	photoH := &handlers.PhotoHandler{Repo: repo}
+	photoH.Register(router)
+
+	roleH := &handlers.RoleHandler{Repo: repo}
+	roleH.Register(router)
+
+	userH := &handlers.UserHandler{Repo: repo}
+	userH.Register(router)
+
+	cartH := &handlers.CartHandler{Repo: repo}
+	cartH.Register(router)
+
+	orderH := &handlers.OrderHandler{Repo: repo}
+	orderH.Register(router)
+
+	itemH := &handlers.OrderItemHandler{Repo: repo}
+	itemH.Register(router)
+
+	// html-страницы. json остаётся на /product, /user и остальных ручках из задания
+	web, err := pages.New(repo)
+	if err != nil {
+		return err
+	}
+	web.Register(router)
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("frontend/css"))))
+	router.NotFoundHandler = http.HandlerFunc(web.NotFoundPage)
+
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		status, components := Health(db)
-		w.WriteHeader(status)
-		json.NewEncoder(w).Encode(components)
+		status, components := config.Health(db)
+		handlers.WriteJSON(w, status, components)
+
 	}).Methods("GET")
-	_, components := Health(db)
+
+	_, components := config.Health(db)
 	slog.Info("Server is listening", "addr", Config.Addr, "components", components)
 	return http.ListenAndServe(Config.Addr, router)
-}
-
-func Health(db *sqlx.DB) (int, map[string]interface{}) {
-
-	status := 200
-	components := []Status{}
-
-	if err := db.Ping(); err != nil {
-		components = append(components, Status{
-			Name:   "database",
-			Health: false,
-			Error:  err.Error(),
-		})
-		status = http.StatusRequestTimeout
-	} else {
-		components = append(components, Status{
-			Name:   "database",
-			Health: true,
-		})
-	}
-
-	resp := map[string]interface{}{
-		"status":     status,
-		"components": components,
-	}
-	return status, resp
-
 }

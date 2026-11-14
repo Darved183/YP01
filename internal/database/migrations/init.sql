@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
     email             TEXT NOT NULL UNIQUE,
     phone             TEXT NOT NULL,
     role_id           TEXT NOT NULL REFERENCES roles(id),
-    registration_date TEXT NOT NULL
+    registration_date TEXT NOT NULL,
+    password          TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS products (
@@ -24,7 +25,8 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT NOT NULL,
     brand       TEXT NOT NULL,
     season      TEXT NOT NULL,
-    price       REAL NOT NULL
+    price       REAL NOT NULL,
+    stock       INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS photos (
@@ -44,7 +46,8 @@ CREATE TABLE IF NOT EXISTS orders (
     id        TEXT PRIMARY KEY,
     user_id   TEXT NOT NULL REFERENCES users(id),
     date_time TEXT NOT NULL,
-    status    TEXT NOT NULL
+    status    TEXT NOT NULL,
+    comment   TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
