@@ -26,7 +26,6 @@ func (h *PhotoHandler) Register(r *mux.Router) {
 
 func (h *PhotoHandler) Create(w http.ResponseWriter, r *http.Request) {
 
-	// больше 20мб всё равно не фотка для карточки
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid form")

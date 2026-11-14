@@ -1,0 +1,9 @@
+.git
+bin
+db.db
+db.db-wal
+db.db-shm
+uploads
+.env
+*.exe
+_*.py

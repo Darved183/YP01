@@ -52,7 +52,6 @@ func Run() error {
 	itemH := &handlers.OrderItemHandler{Repo: repo}
 	itemH.Register(router)
 
-	// html-страницы. json остаётся на /product, /user и остальных ручках из задания
 	web, err := pages.New(repo)
 	if err != nil {
 		return err

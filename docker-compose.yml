@@ -1,0 +1,14 @@
+services:
+  shop:
+    build: .
+    ports:
+      - "8181:8181"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8181
+    volumes:
+      - yp01-data:/data
+    restart: unless-stopped
+
+volumes:
+  yp01-data:

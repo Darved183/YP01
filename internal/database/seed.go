@@ -54,7 +54,7 @@ func ensureStock(db *sqlx.DB) error {
 			return err
 		}
 	}
-	// уже оформленные заказы тоже занимают склад, отменённые — нет
+
 	_, err := db.Exec(`
 		UPDATE products SET stock = stock - (
 			SELECT COUNT(*) FROM order_items oi

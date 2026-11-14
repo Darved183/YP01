@@ -25,8 +25,6 @@ func Load() (*sqlx.DB, error) {
 		return nil, err
 	}
 
-	// в db.db таблица cart уже была (Cart), sqlite их не различает,
-	// поэтому create if not exists не заменяет старые колонки
 	var userIDCol int
 	err = db.Get(&userIDCol, `SELECT COUNT(*) FROM pragma_table_info('cart') WHERE lower(name) = 'user_id'`)
 	if err != nil {
@@ -69,23 +67,6 @@ func Load() (*sqlx.DB, error) {
 		return nil, err
 	}
 	if _, err = db.Exec(string(roles)); err != nil {
-		db.Close()
-		return nil, err
-	}
-
-	if err = ensurePassword(db); err != nil {
-		db.Close()
-		return nil, err
-	}
-	if err = ensureStock(db); err != nil {
-		db.Close()
-		return nil, err
-	}
-	if err = ensureComment(db); err != nil {
-		db.Close()
-		return nil, err
-	}
-	if err = SeedIfEmpty(db); err != nil {
 		db.Close()
 		return nil, err
 	}
