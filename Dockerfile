@@ -16,6 +16,7 @@ RUN apt-get update \
 
 COPY --from=build /out/app /app/app
 COPY frontend /app/frontend
+RUN test -f /app/frontend/templates/layout.html
 COPY internal/database/migrations /app/internal/database/migrations
 COPY docker-entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh

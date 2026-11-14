@@ -1,0 +1,51 @@
+{{define "content"}}
+<div class="catalog">
+  <form class="filters" method="get" action="/catalog">
+    <h2>Фильтры</h2>
+    {{range .Fields}}
+      <label>{{.Label}}
+        <select name="{{.Key}}" onchange="this.form.submit()">
+          <option value="">Все</option>
+          {{$cur := .Current}}
+          {{range .Options}}
+            <option value="{{.}}"{{if eq . $cur}} selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </label>
+    {{end}}
+    <label>Цена
+      <select name="sort" onchange="this.form.submit()">
+        <option value=""{{if eq $.Sort ""}} selected{{end}}>Как в каталоге</option>
+        <option value="price-asc"{{if eq $.Sort "price-asc"}} selected{{end}}>Сначала дешевле</option>
+        <option value="price-desc"{{if eq $.Sort "price-desc"}} selected{{end}}>Сначала дороже</option>
+      </select>
+    </label>
+    <a class="btn ghost" href="/catalog">Сбросить</a>
+  </form>
+  <div>
+    <p class="muted small">{{.RangeText}}</p>
+    {{if .Cards}}
+      <div class="grid">
+        {{range .Cards}}
+          <a class="card" href="/item/{{.ID}}">
+            {{if .HasFile}}
+              <img class="shot" alt="{{.Name}}" src="/photo/{{.PhotoID}}">
+            {{else}}
+              <div class="swatch{{if light .Color}} light{{end}}" style="--c:{{color .Color}}"><span>{{.Brand}}</span></div>
+            {{end}}
+            <h2>{{.Name}}</h2>
+            <p class="muted small">{{.Type}} · {{.Gender}} · {{.Size}}</p>
+            <p class="price">{{.Price}}</p>
+          </a>
+        {{end}}
+      </div>
+    {{else}}
+      <div class="panel stack">
+        <p>По этим фильтрам товаров нет.</p>
+        <p><a class="btn ghost" href="/catalog">Сбросить фильтры</a></p>
+      </div>
+    {{end}}
+    {{template "pager" .}}
+  </div>
+</div>
+{{end}}

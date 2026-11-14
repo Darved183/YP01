@@ -1,0 +1,14 @@
+{{define "content"}}
+<div class="narrow">
+  <form class="panel stack" method="post" action="/login">
+    <h2>Вход</h2>
+    {{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}
+    <input type="hidden" name="next" value="{{.Next}}">
+    <label>Почта<input name="email" type="email" autocomplete="username" required autofocus value="{{.Email}}"></label>
+    <label>Пароль<input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn" type="submit">Войти</button>
+    <p class="muted small">Нет аккаунта? <a href="/register?next={{.Next}}">Регистрация</a></p>
+    <p class="muted small">Клиент: client@forma.test, пароль client. Второй клиент: maria@forma.test, пароль maria. Менеджер: manager@forma.test, пароль manager. Администратор: admin@forma.test, пароль admin.</p>
+  </form>
+</div>
+{{end}}

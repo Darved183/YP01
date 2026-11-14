@@ -1,0 +1,64 @@
+{{define "content"}}
+<form class="form-grid" method="post" action="/admin/products/save" enctype="multipart/form-data">
+  {{if .Error}}<p class="form-error wide">{{.Error}}</p>{{end}}
+  <input type="hidden" name="id" value="{{.Product.ID}}">
+  {{range .Fields}}
+    <datalist id="list-{{.Key}}">
+      {{range .Options}}<option value="{{.}}"></option>{{end}}
+    </datalist>
+  {{end}}
+  <label class="wide">Название<input name="name" required maxlength="120" value="{{.Product.Name}}"></label>
+  <label>Тип<input name="type" list="list-type" required value="{{.Product.Type}}"></label>
+  <label>Пол<input name="gender" list="list-gender" required value="{{.Product.Gender}}"></label>
+  <label>Размер<input name="size" list="list-size" required value="{{.Product.Size}}"></label>
+  <label>Цвет<input name="color" list="list-color" required value="{{.Product.Color}}"></label>
+  <label>Бренд<input name="brand" list="list-brand" required value="{{.Product.Brand}}"></label>
+  <label>Сезон<input name="season" list="list-season" required value="{{.Product.Season}}"></label>
+  <label>Цена<input name="price" type="number" min="0" step="0.01" required value="{{.Product.Price}}"></label>
+  <label>На складе<input name="stock" type="number" min="0" step="1" required {{if .Editing}}value="{{.Product.Stock}}"{{end}}></label>
+  <label class="wide">Описание<textarea name="description" maxlength="1000">{{.Product.Description}}</textarea></label>
+  {{if not .Editing}}
+    <div class="wide stack">
+      <p class="muted small">Можно выбрать сразу несколько фотографий.</p>
+      <label>Файлы<input name="file" type="file" accept="image/*" multiple></label>
+    </div>
+  {{end}}
+  <div class="wide row">
+    <button class="btn" type="submit">{{if .Editing}}Сохранить{{else}}Добавить товар{{end}}</button>
+    {{if .Editing}}
+      <button class="btn danger" type="submit" formaction="/admin/products/delete">Удалить</button>
+      <a class="btn ghost" href="/item/{{.Product.ID}}">На витрине</a>
+    {{end}}
+  </div>
+</form>
+{{if .Editing}}
+  <section class="stack" style="margin-top:1.4rem">
+    <h2>Фотографии</h2>
+    {{if .Photos}}
+      <ul class="plain">
+        {{range .Photos}}
+          <li>
+            {{if .HasFile}}
+              <a href="/picture/{{.ID}}"><img class="thumb" src="/photo/{{.ID}}" alt=""></a>
+            {{else}}
+              <span class="muted small">Файл не загружен</span>
+            {{end}}
+            <form method="post" action="/admin/photos/delete">
+              <input type="hidden" name="id" value="{{.ID}}">
+              <button class="btn ghost small" type="submit">Удалить</button>
+            </form>
+          </li>
+        {{end}}
+      </ul>
+    {{else}}
+      <p class="muted">Пока нет файлов.</p>
+    {{end}}
+    <form class="panel stack" method="post" action="/admin/photos/add" enctype="multipart/form-data">
+      <h3>Загрузить</h3>
+      <input type="hidden" name="product_id" value="{{.Product.ID}}">
+      <label>Файлы<input name="file" type="file" accept="image/*" multiple required></label>
+      <button class="btn" type="submit">Добавить фото</button>
+    </form>
+  </section>
+{{end}}
+{{end}}

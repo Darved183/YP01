@@ -1,0 +1,23 @@
+{{define "content"}}
+<form class="form-grid narrow" method="post" action="/admin/users/save">
+  <input type="hidden" name="id" value="{{.Next}}">
+  <label class="wide">Имя<input name="name" required maxlength="80" value="{{.Text}}"></label>
+  <label class="wide">Почта<input name="email" type="email" required value="{{.Email}}"></label>
+  <label class="wide">Телефон<input name="phone" required minlength="5" maxlength="30" value="{{.Buyer}}"></label>
+  <label class="wide">Роль
+    <select name="role_id" required>
+      {{range .Roles}}
+        <option value="{{.ID}}"{{if .Selected}} selected{{end}}>{{.Name}}</option>
+      {{end}}
+    </select>
+  </label>
+  <label class="wide">Пароль<input name="password" type="password" autocomplete="new-password"{{if not .Editing}} required minlength="4"{{end}}></label>
+  {{if .Editing}}<p class="wide muted small">Пароль можно не менять: оставьте поле пустым. Дата регистрации: {{.When}}.</p>{{end}}
+  <div class="wide row">
+    <button class="btn" type="submit">{{if .Editing}}Сохранить{{else}}Создать{{end}}</button>
+    {{if .Editing}}
+      <button class="btn danger" type="submit" formaction="/admin/users/delete">Удалить</button>
+    {{end}}
+  </div>
+</form>
+{{end}}

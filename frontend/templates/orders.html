@@ -1,0 +1,68 @@
+{{define "content"}}
+<form class="panel" method="get" action="/orders" style="margin-bottom:1rem">
+  <div class="form-grid">
+    <label>Статус
+      <select name="status">
+        <option value="">Все</option>
+        {{$cur := .Status}}
+        {{range .Statuses}}
+          <option value="{{.}}"{{if eq . $cur}} selected{{end}}>{{.}}</option>
+        {{end}}
+      </select>
+    </label>
+    <label>С<input name="from" type="date" value="{{.From}}"></label>
+    <label>По<input name="to" type="date" value="{{.To}}"></label>
+    <div class="row" style="align-self:end">
+      <button class="btn" type="submit">Показать</button>
+      <a class="btn ghost" href="/orders">Сбросить</a>
+    </div>
+  </div>
+</form>
+{{if .Error}}<div class="panel"><p class="form-error">{{.Error}}</p></div>{{end}}
+{{if not .Error}}
+  <p class="muted small">{{.RangeText}}</p>
+  {{if .Orders}}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Дата</th>
+            {{if .Staff}}<th>Клиент</th>{{end}}
+            <th>Сумма</th>
+            <th>Статус</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Orders}}
+            <tr>
+              <td class="nowrap">{{.When}}</td>
+              {{if $.Staff}}<td>{{.Buyer}}</td>{{end}}
+              <td class="nowrap">{{.Sum}}</td>
+              <td>
+                {{if $.Staff}}
+                  <form method="post" action="/orders/{{.ID}}/status">
+                    <input type="hidden" name="back" value="/orders">
+                    <select name="status" aria-label="Статус заказа" onchange="this.form.submit()">
+                      {{$st := .Status}}
+                      {{range $.Statuses}}
+                        <option value="{{.}}"{{if eq . $st}} selected{{end}}>{{.}}</option>
+                      {{end}}
+                    </select>
+                  </form>
+                {{else}}
+                  <span class="status" data-status="{{.Status}}">{{.Status}}</span>
+                {{end}}
+              </td>
+              <td class="nowrap"><a href="/orders/{{.ID}}">Открыть</a></td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  {{else}}
+    <div class="panel"><p>Заказов по этому отбору нет.</p></div>
+  {{end}}
+  {{template "pager" .}}
+{{end}}
+{{end}}

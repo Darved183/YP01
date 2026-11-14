@@ -1,0 +1,26 @@
+{{define "content"}}
+<p class="muted small">{{.RangeText}}</p>
+{{if .Cards}}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Товар</th><th>Тип</th><th>Пол</th><th>Размер</th><th>На складе</th><th>Цена</th><th></th></tr></thead>
+      <tbody>
+        {{range .Cards}}
+          <tr>
+            <td><a href="/admin/products/{{.ID}}">{{.Name}}</a></td>
+            <td>{{.Type}}</td>
+            <td>{{.Gender}}</td>
+            <td>{{.Size}}</td>
+            <td>{{.Stock}}</td>
+            <td class="nowrap">{{.Price}}</td>
+            <td class="nowrap"><a href="/item/{{.ID}}">На витрине</a></td>
+          </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+{{else}}
+  <div class="panel"><p>Товаров нет.</p></div>
+{{end}}
+{{template "pager" .}}
+{{end}}

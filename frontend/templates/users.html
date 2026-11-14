@@ -1,0 +1,43 @@
+{{define "content"}}
+<div class="stack">
+  <form method="get" action="/admin/users">
+    <label>Роль
+      <select name="role" onchange="this.form.submit()">
+        <option value="">Все роли</option>
+        {{range .Roles}}
+          <option value="{{.ID}}"{{if .Selected}} selected{{end}}>{{.Name}}</option>
+        {{end}}
+      </select>
+    </label>
+  </form>
+  <p class="muted small">{{.RangeText}}</p>
+  {{if .Users}}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Имя</th><th>Почта</th><th>Телефон</th><th>Роль</th><th>Регистрация</th><th></th></tr></thead>
+        <tbody>
+          {{range .Users}}
+            <tr>
+              <td>{{.Name}}</td>
+              <td>{{.Email}}</td>
+              <td>{{.Phone}}</td>
+              <td>{{.Role}}</td>
+              <td class="nowrap">{{.Date}}</td>
+              <td class="nowrap">
+                <a href="/admin/users/{{.ID}}">Править</a>
+                <form method="post" action="/admin/users/delete" style="display:inline">
+                  <input type="hidden" name="id" value="{{.ID}}">
+                  <button class="btn ghost small" type="submit">Удалить</button>
+                </form>
+              </td>
+            </tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  {{else}}
+    <div class="panel"><p>Пользователей нет.</p></div>
+  {{end}}
+  {{template "pager" .}}
+</div>
+{{end}}

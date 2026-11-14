@@ -1,0 +1,12 @@
+{{define "content"}}
+<div class="panel stack">
+  <p>{{.Text}}</p>
+  <p class="row">
+    {{if eq .Key "guest"}}
+      <a class="btn" href="/login">Войти</a>
+      <a class="btn ghost" href="/register">Регистрация</a>
+    {{end}}
+    <a class="btn{{if ne .Key "guest"}} ghost{{end}}" href="/catalog">В каталог</a>
+  </p>
+</div>
+{{end}}

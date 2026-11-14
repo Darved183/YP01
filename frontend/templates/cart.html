@@ -1,0 +1,48 @@
+{{define "content"}}
+{{if not .Lines}}
+  <div class="panel stack">
+    <p>Корзина пустая.</p>
+    <p><a class="btn" href="/catalog">В каталог</a></p>
+  </div>
+{{else}}
+  <div>
+    {{range .Lines}}
+      <article class="cart-line">
+        {{if .Missing}}
+          <div class="swatch mini"></div>
+        {{else}}
+          <div class="swatch mini{{if light .Color}} light{{end}}" style="--c:{{color .Color}}"><span>{{.Brand}}</span></div>
+        {{end}}
+        <div>
+          {{if .Missing}}Товар удалён{{else}}<a href="/item/{{.ProductID}}">{{.Name}}</a>{{end}}
+          <p class="muted small">{{if .Missing}}Уберите позицию{{else}}{{.Meta}}{{end}}</p>
+        </div>
+        <form class="qty" method="post" action="/cart/count">
+          <input type="hidden" name="id" value="{{.ID}}">
+          <button type="submit" name="op" value="dec" aria-label="Меньше">−</button>
+          <span>{{.Count}}</span>
+          <button type="submit" name="op" value="inc" aria-label="Больше">+</button>
+        </form>
+        <div>
+          <div class="price">{{.Sum}}</div>
+          <form method="post" action="/cart/remove">
+            <input type="hidden" name="id" value="{{.ID}}">
+            <button type="submit" class="btn ghost small">Удалить</button>
+          </form>
+        </div>
+      </article>
+    {{end}}
+    <div class="spread" style="margin-top:1rem">
+      <div>
+        <p class="muted small">Сумма</p>
+        <p class="total">{{.Total}}</p>
+      </div>
+      {{if .Broken}}
+        <p class="form-error">Проверьте корзину: товар удалён или его больше, чем осталось на складе.</p>
+      {{else}}
+        <form method="post" action="/checkout"><button class="btn" type="submit">Оформить заказ</button></form>
+      {{end}}
+    </div>
+  </div>
+{{end}}
+{{end}}

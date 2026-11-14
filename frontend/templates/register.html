@@ -1,0 +1,16 @@
+{{define "content"}}
+<div class="narrow">
+  <form class="panel stack" method="post" action="/register">
+    <h2>Новый клиент</h2>
+    {{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}
+    <input type="hidden" name="next" value="{{.Next}}">
+    <label>Имя<input name="name" required maxlength="80" autocomplete="name" value="{{.Text}}"></label>
+    <label>Почта<input name="email" type="email" required autocomplete="email" value="{{.Email}}"></label>
+    <label>Телефон<input name="phone" required minlength="5" maxlength="30" placeholder="+7 900 000-00-00" autocomplete="tel" value="{{.Buyer}}"></label>
+    <label>Пароль<input name="password" type="password" required minlength="4" autocomplete="new-password"></label>
+    <label class="check"><input type="checkbox" name="policy" required> Согласен с политикой конфиденциальности и обработкой персональных данных</label>
+    <button class="btn" type="submit">Создать аккаунт</button>
+    <p class="muted small">Уже есть аккаунт? <a href="/login?next={{.Next}}">Войти</a></p>
+  </form>
+</div>
+{{end}}

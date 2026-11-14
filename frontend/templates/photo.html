@@ -1,0 +1,27 @@
+{{define "content"}}
+<div class="product">
+  <div>
+    {{if and .HasFile .Photo}}
+      <img class="shot" alt="{{if .Product}}{{.Product.Name}}{{else}}Фотография{{end}}" src="/photo/{{.Photo.ID}}">
+    {{else if .Product}}
+      <div class="swatch{{if light .Product.Color}} light{{end}}" style="--c:{{color .Product.Color}}"><span>{{.Product.Brand}}</span></div>
+    {{else}}
+      <div class="swatch"><span>KeptShop</span></div>
+    {{end}}
+  </div>
+  <div class="stack panel">
+    {{if .Product}}
+      <p><a href="/item/{{.Product.ID}}">{{.Product.Name}}</a></p>
+    {{else}}
+      <p>Товар удалён.</p>
+    {{end}}
+    {{if eq .Key "admin"}}
+      <form method="post" action="/admin/photos/delete">
+        <input type="hidden" name="id" value="{{.Photo.ID}}">
+        <input type="hidden" name="back" value="/item/{{.Photo.ProductID}}">
+        <button class="btn danger" type="submit">Удалить фотографию</button>
+      </form>
+    {{end}}
+  </div>
+</div>
+{{end}}

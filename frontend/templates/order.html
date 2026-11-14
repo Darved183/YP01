@@ -1,0 +1,50 @@
+{{define "content"}}
+<div class="stack">
+  <p><a href="/orders">К списку</a></p>
+  <div class="panel stack">
+    <p>{{.When}}</p>
+    {{if .Staff}}<p>Клиент: {{.Buyer}}</p>{{end}}
+    <div>
+      {{if .Staff}}
+        <form method="post" action="/orders/{{.Order.ID}}/status">
+          <input type="hidden" name="back" value="/orders/{{.Order.ID}}">
+          <select name="status" aria-label="Статус заказа" onchange="this.form.submit()">
+            {{$st := .Order.Status}}
+            {{range .Statuses}}
+              <option value="{{.}}"{{if eq . $st}} selected{{end}}>{{.}}</option>
+            {{end}}
+          </select>
+        </form>
+      {{else}}
+        <span class="status" data-status="{{.Order.Status}}">{{.Order.Status}}</span>
+      {{end}}
+    </div>
+    {{if .Comment}}
+      <p><span class="muted small">Комментарий к отмене</span><br>{{.Comment}}</p>
+    {{end}}
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Товар</th><th>Шт.</th><th>Цена</th><th>Сумма</th></tr></thead>
+      <tbody>
+        {{range .Groups}}
+          <tr>
+            <td>{{if .Missing}}Товар удалён{{else}}<a href="/item/{{.ProductID}}">{{.Name}}</a>{{end}}</td>
+            <td>{{.Count}}</td>
+            <td>{{.Price}}</td>
+            <td>{{.Sum}}</td>
+          </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  <p class="total">{{.Sum}}</p>
+  <p class="muted small">Цена зафиксирована на момент покупки.</p>
+  {{if .CanCancel}}
+    <form class="panel stack" method="post" action="/orders/{{.Order.ID}}/cancel">
+      <label>Комментарий<textarea name="comment" required maxlength="500" placeholder="Почему отменяете заказ"></textarea></label>
+      <button class="btn danger" type="submit">Отменить заказ</button>
+    </form>
+  {{end}}
+</div>
+{{end}}

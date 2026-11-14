@@ -1,0 +1,76 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f0ea">
+  <title>{{.Title}} — KeptShop</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%231c1b19' width='32' height='32'/%3E%3Ctext x='16' y='21' text-anchor='middle' fill='%23f3f0ea' font-size='14' font-family='Georgia'%3EF%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="inner bar">
+      <div class="brand-wrap">
+        <a class="brand" href="/catalog"><span class="brand-name">KeptShop</span><span class="brand-sub">магазин одежды</span></a>
+      </div>
+      <nav class="nav">
+        <a href="/catalog"{{if .NavCatalog}} aria-current="page"{{end}}>Каталог</a>
+        {{if not .User}}
+          <a href="/login"{{if eq .Path "/login"}} aria-current="page"{{end}}>Войти</a>
+          <a href="/register"{{if eq .Path "/register"}} aria-current="page"{{end}}>Регистрация</a>
+        {{else if eq .Key "client"}}
+          <a href="/cart"{{if .NavCart}} aria-current="page"{{end}}>Корзина{{if .CartCount}}<span class="count-pill">{{.CartCount}}</span>{{end}}</a>
+          <a href="/orders"{{if .NavOrders}} aria-current="page"{{end}}>Мои заказы</a>
+        {{else if or (eq .Key "manager") (eq .Key "admin")}}
+          <a href="/orders"{{if .NavOrders}} aria-current="page"{{end}}>Заказы</a>
+        {{end}}
+        {{if eq .Key "admin"}}
+          <a href="/admin/products"{{if .NavProducts}} aria-current="page"{{end}}>Товары</a>
+          <a href="/admin/users"{{if .NavUsers}} aria-current="page"{{end}}>Пользователи</a>
+          <a href="/admin/roles"{{if .NavRoles}} aria-current="page"{{end}}>Роли</a>
+        {{end}}
+      </nav>
+      {{if .User}}
+        <div class="userbox">
+          <div>
+            <div class="who">{{.User.Name}}</div>
+            <div class="muted small">{{.RoleName}}</div>
+          </div>
+          <form method="post" action="/logout"><button type="submit" class="btn ghost small">Выйти</button></form>
+        </div>
+      {{else}}
+        <div class="userbox"><div><div class="who">Гость</div><div class="muted small">без входа</div></div></div>
+      {{end}}
+    </div>
+  </header>
+  <main class="inner">
+    <div class="page-head">
+      <div>
+        <h1>{{.Title}}</h1>
+        {{if .Hint}}<p class="hint">{{.Hint}}</p>{{end}}
+      </div>
+      {{if .ActionHref}}<a class="btn" href="{{.ActionHref}}">{{.ActionLabel}}</a>{{end}}
+    </div>
+    {{template "content" .}}
+  </main>
+  <footer>
+    <div class="inner">
+      <p class="muted small">KeptShop · магазин одежды</p>
+    </div>
+  </footer>
+</div>
+{{if .Flash}}<div class="toast" role="status">{{.Flash}}</div>{{end}}
+</body>
+</html>
+{{end}}
+
+{{define "pager"}}
+<nav class="pager" aria-label="Страницы">
+  {{if gt .Page 1}}<a href="{{.PagePath}}?{{.PrevQ}}">Назад</a>{{else}}<a href="#" aria-disabled="true">Назад</a>{{end}}
+  <span>{{.Page}} / {{.Pages}}</span>
+  {{if lt .Page .Pages}}<a href="{{.PagePath}}?{{.NextQ}}">Дальше</a>{{else}}<a href="#" aria-disabled="true">Дальше</a>{{end}}
+</nav>
+{{end}}

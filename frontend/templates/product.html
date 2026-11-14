@@ -1,0 +1,61 @@
+{{define "content"}}
+<div class="product">
+  <div>
+    {{if .HasFile}}
+      <div class="gallery">
+        {{range .Photos}}
+          {{if .HasFile}}
+            <a href="/picture/{{.ID}}"><img class="shot" alt="{{$.Product.Name}}" src="/photo/{{.ID}}"></a>
+          {{end}}
+        {{end}}
+      </div>
+    {{else}}
+      <div class="swatch{{if light .Product.Color}} light{{end}}" style="--c:{{color .Product.Color}}"><span>{{.Product.Brand}}</span></div>
+    {{end}}
+  </div>
+  <div class="stack">
+    <p class="price large">{{money .Product.Price}}</p>
+    {{if .Product.Description}}<p>{{.Product.Description}}</p>{{end}}
+    <p class="muted">В наличии: {{.Available}} шт.</p>
+    <dl class="specs">
+      <div><dt>Тип</dt><dd>{{.Product.Type}}</dd></div>
+      <div><dt>Пол</dt><dd>{{.Product.Gender}}</dd></div>
+      <div><dt>Размер</dt><dd>{{.Product.Size}}</dd></div>
+      <div><dt>Цвет</dt><dd>{{.Product.Color}}</dd></div>
+      <div><dt>Бренд</dt><dd>{{.Product.Brand}}</dd></div>
+      <div><dt>Сезон</dt><dd>{{.Product.Season}}</dd></div>
+    </dl>
+    {{if eq .Key "guest"}}
+      <div class="panel stack">
+        <p>Чтобы положить вещь в корзину, войдите в аккаунт.</p>
+        <p class="row">
+          <a class="btn" href="/login?next=/item/{{.Product.ID}}">Войти</a>
+          <a class="btn ghost" href="/register?next=/item/{{.Product.ID}}">Регистрация</a>
+        </p>
+      </div>
+    {{else if eq .Key "client"}}
+      {{if gt .Available 0}}
+        <form class="panel stack" method="post" action="/cart/add">
+          <input type="hidden" name="product_id" value="{{.Product.ID}}">
+          <label>Количество<input name="count" type="number" min="1" max="{{.Available}}" value="1" required></label>
+          <button class="btn" type="submit">В корзину</button>
+        </form>
+      {{else}}
+        <p class="panel">Сейчас нет в наличии.</p>
+      {{end}}
+    {{else if eq .Key "admin"}}
+      <div class="row">
+        <a class="btn" href="/admin/products/{{.Product.ID}}">Редактировать</a>
+        <form method="post" action="/admin/products/delete">
+          <input type="hidden" name="id" value="{{.Product.ID}}">
+          <button class="btn danger" type="submit">Удалить</button>
+        </form>
+      </div>
+    {{else if eq .Key "manager"}}
+      <p class="muted">Заказ оформляет клиент.</p>
+    {{else}}
+      <p class="muted">Для этой роли доступен просмотр каталога.</p>
+    {{end}}
+  </div>
+</div>
+{{end}}

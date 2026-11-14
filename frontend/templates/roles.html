@@ -1,0 +1,25 @@
+{{define "content"}}
+<div class="stack">
+  <form class="panel row" method="post" action="/admin/roles/save">
+    <label style="flex:1">Новая роль<input name="name" required maxlength="60" placeholder="Например, курьер"></label>
+    <button class="btn" type="submit">Создать</button>
+  </form>
+  <ul class="plain">
+    {{range .Roles}}
+      <li class="block">
+        <form class="role-line" method="post" action="/admin/roles/save">
+          <input type="hidden" name="id" value="{{.ID}}">
+          <label>Название<input name="name" required maxlength="60" value="{{.Name}}"></label>
+          <div class="stack">
+            <span class="muted small">{{.Note}}</span>
+            <span class="row">
+              <button class="btn small" type="submit">Сохранить</button>
+              <button class="btn ghost small" type="submit" formaction="/admin/roles/delete">Удалить</button>
+            </span>
+          </div>
+        </form>
+      </li>
+    {{end}}
+  </ul>
+</div>
+{{end}}
