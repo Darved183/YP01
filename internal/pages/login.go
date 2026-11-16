@@ -57,16 +57,21 @@ func (s *Pages) RegisterPost(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 	phone := strings.TrimSpace(r.FormValue("phone"))
 	pass := r.FormValue("password")
+	again := r.FormValue("password2")
 	next := safeNext(r.FormValue("next"))
 	msg := ""
 	if name == "" || email == "" || phone == "" {
 		msg = "Заполните имя, почту и телефон"
+	} else if !nameOK(name) {
+		msg = "Имя должно быть от 2 до 80 символов"
 	} else if !validEmail(email) {
 		msg = "Некорректная почта"
 	} else if len(phone) < 5 {
 		msg = "Укажите телефон"
 	} else if len(pass) < 4 {
 		msg = "Пароль должен быть не короче 4 символов"
+	} else if pass != again {
+		msg = "Пароли не совпадают"
 	}
 	if msg == "" {
 		if _, err := s.Repo.GetUserByEmail(email); err == nil {
@@ -108,6 +113,17 @@ func (s *Pages) RegisterPost(w http.ResponseWriter, r *http.Request) {
 	setUserCookie(w, user.ID)
 	setFlash(w, "Аккаунт создан")
 	goTo(w, r, next)
+}
+
+func (s *Pages) Policy(w http.ResponseWriter, r *http.Request) {
+	p := s.base(w, r)
+	p.Title = "Политика конфиденциальности"
+	s.render(w, "policy", p)
+}
+
+func nameOK(name string) bool {
+	n := len([]rune(name))
+	return n >= 2 && n <= 80
 }
 
 func (s *Pages) Logout(w http.ResponseWriter, r *http.Request) {

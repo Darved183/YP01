@@ -3,13 +3,47 @@
   {{if .Error}}<p class="form-error wide">{{.Error}}</p>{{end}}
   <input type="hidden" name="id" value="{{.Product.ID}}">
   {{range .Fields}}
-    <datalist id="list-{{.Key}}">
+    {{if eq .Key "brand"}}
+    <datalist id="list-brand">
       {{range .Options}}<option value="{{.}}"></option>{{end}}
     </datalist>
+    {{end}}
   {{end}}
   {{if .Product.Article}}<p class="wide sku">Артикул {{.Product.Article}}</p>{{end}}
   <label class="wide">Название<input name="name" required maxlength="120" value="{{.Product.Name}}"></label>
-  <label>Тип<input name="type" list="list-type" required value="{{.Product.Type}}"></label>
+  <p class="wide muted small">Тип, размер и цвет можно выбрать из списка. Если нужного нет — напишите его рядом, он сохранится с товаром и появится в фильтрах.</p>
+  {{$type := .Product.Type}}
+  {{$size := .Product.Size}}
+  {{$color := .Product.Color}}
+  {{range .Fields}}
+    {{if eq .Key "type"}}
+      <label>Тип
+        <select name="type">
+          <option value="">Из списка</option>
+          {{range .Options}}<option value="{{.}}"{{if eq . $type}} selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+      <label>Новый тип<input name="type_new" maxlength="40" placeholder="если нет в списке"></label>
+    {{end}}
+    {{if eq .Key "size"}}
+      <label>Размер
+        <select name="size">
+          <option value="">Из списка</option>
+          {{range .Options}}<option value="{{.}}"{{if eq . $size}} selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+      <label>Новый размер<input name="size_new" maxlength="40" placeholder="если нет в списке"></label>
+    {{end}}
+    {{if eq .Key "color"}}
+      <label>Цвет
+        <select name="color">
+          <option value="">Из списка</option>
+          {{range .Options}}<option value="{{.}}"{{if eq . $color}} selected{{end}}>{{.}}</option>{{end}}
+        </select>
+      </label>
+      <label>Новый цвет<input name="color_new" maxlength="40" placeholder="если нет в списке"></label>
+    {{end}}
+  {{end}}
   <label>Пол
     <select name="gender" required>
       <option value="женский"{{if eq .Product.Gender "женский"}} selected{{end}}>женский</option>
@@ -17,16 +51,6 @@
       <option value="унисекс"{{if eq .Product.Gender "унисекс"}} selected{{end}}>унисекс</option>
     </select>
   </label>
-  <label>Размер
-    <select name="size" required>
-      <option value="XS"{{if eq .Product.Size "XS"}} selected{{end}}>XS</option>
-      <option value="S"{{if eq .Product.Size "S"}} selected{{end}}>S</option>
-      <option value="M"{{if eq .Product.Size "M"}} selected{{end}}>M</option>
-      <option value="L"{{if eq .Product.Size "L"}} selected{{end}}>L</option>
-      <option value="XL"{{if eq .Product.Size "XL"}} selected{{end}}>XL</option>
-    </select>
-  </label>
-  <label>Цвет<input name="color" list="list-color" required value="{{.Product.Color}}"></label>
   <label>Бренд<input name="brand" list="list-brand" required value="{{.Product.Brand}}"></label>
   <label>Сезон
     <select name="season" required>

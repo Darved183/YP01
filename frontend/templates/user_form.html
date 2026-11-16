@@ -2,7 +2,7 @@
 <form class="form-grid narrow" method="post" action="/admin/users/save">
   {{if .Error}}<p class="form-error wide">{{.Error}}</p>{{end}}
   <input type="hidden" name="id" value="{{.Next}}">
-  <label class="wide">Имя<input name="name" required maxlength="80" value="{{.Text}}"></label>
+  <label class="wide">Имя<input name="name" required minlength="2" maxlength="80" value="{{.Text}}"></label>
   <label class="wide">Почта<input name="email" type="email" required value="{{.Email}}"></label>
   <label class="wide">Телефон<input name="phone" required maxlength="18" inputmode="tel" placeholder="+7 900 000-00-00" pattern="(\+7|8)[0-9 \-\(\)]{10,16}" title="Формат +7 900 000-00-00" value="{{.Buyer}}"></label>
   <label class="wide">Роль

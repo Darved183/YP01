@@ -251,6 +251,9 @@ label.check {
   line-height: 1.4;
 }
 label.check input { width: 1.05rem; height: 1.05rem; margin-top: .2rem; accent-color: var(--ink); }
+label.check a { color: inherit; text-decoration: underline; }
+.prose { max-width: 40rem; }
+.prose h2 { margin-top: .4rem; }
 
 .gallery { display: grid; gap: .7rem; }
 .stage { position: relative; }

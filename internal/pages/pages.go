@@ -20,7 +20,7 @@ func New(repo *database.Repository) (*Pages, error) {
 	s := &Pages{Repo: repo, pages: map[string]*template.Template{}}
 	names := []string{
 		"catalog", "product", "photo", "login", "register", "cart",
-		"orders", "order", "products", "product_form", "users", "user_form", "message",
+		"orders", "order", "products", "product_form", "users", "user_form", "policy", "message",
 	}
 	funcs := template.FuncMap{
 		"color": colorStyle,
@@ -49,6 +49,7 @@ func (s *Pages) Register(r *mux.Router) {
 	r.HandleFunc("/login", s.LoginPost).Methods("POST")
 	r.HandleFunc("/register", s.RegisterPage).Methods("GET")
 	r.HandleFunc("/register", s.RegisterPost).Methods("POST")
+	r.HandleFunc("/policy", s.Policy).Methods("GET")
 	r.HandleFunc("/logout", s.Logout).Methods("POST")
 	r.HandleFunc("/cart", s.Cart).Methods("GET")
 	r.HandleFunc("/cart/add", s.CartAdd).Methods("POST")
