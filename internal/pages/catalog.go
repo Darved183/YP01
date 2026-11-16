@@ -65,8 +65,22 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, p, "Ошибка", "Не получилось прочитать каталог", err)
 		return
 	}
+	inCart := map[string]models.Cart{}
+	if p.Key == "client" && p.User != nil {
+		lines, err := s.Repo.GetCartByUser(p.User.ID)
+		if err == nil {
+			for _, line := range lines {
+				inCart[line.ProductID] = line
+			}
+		}
+	}
 	for _, item := range products {
-		p.Cards = append(p.Cards, s.cardOf(item))
+		c := s.cardOf(item)
+		if line, ok := inCart[item.ID]; ok {
+			c.InCart = line.Count
+			c.CartID = line.ID
+		}
+		p.Cards = append(p.Cards, c)
 	}
 	p.RangeText = rangeText(1, total, total)
 	p.Return = r.URL.RequestURI()
@@ -108,6 +122,18 @@ func (s *Pages) Product(w http.ResponseWriter, r *http.Request) {
 	p.Title = item.Name
 	p.Product = item
 	p.Available = s.unreserved(item.ID)
+	if p.Key == "client" && p.User != nil {
+		lines, err := s.Repo.GetCartByUser(p.User.ID)
+		if err == nil {
+			for _, line := range lines {
+				if line.ProductID == item.ID {
+					p.InCart = line.Count
+					p.CartID = line.ID
+					break
+				}
+			}
+		}
+	}
 	photos, err := s.Repo.PhotosByProduct(item.ID)
 	if err != nil {
 		s.fail(w, p, "Ошибка", "Не получилось открыть товар", err)

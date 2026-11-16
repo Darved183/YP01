@@ -62,10 +62,19 @@
         </p>
       </div>
     {{else if eq .Key "client"}}
-      {{if gt .Available 0}}
-        <form class="panel stack" method="post" action="/cart/add">
+      {{if gt .InCart 0}}
+        <form class="buy-qty" method="post" action="/cart/count">
+          <input type="hidden" name="id" value="{{.CartID}}">
+          <input type="hidden" name="back" value="/item/{{.Product.Article}}">
+          <button type="submit" name="op" value="dec" aria-label="Меньше">−</button>
+          <span>{{.InCart}}</span>
+          <button type="submit" name="op" value="inc" aria-label="Больше"{{if lt .Available 1}} disabled{{end}}>+</button>
+        </form>
+      {{else if gt .Available 0}}
+        <form method="post" action="/cart/add">
           <input type="hidden" name="product_id" value="{{.Product.ID}}">
-          <label>Количество<input name="count" type="number" min="1" max="{{.Available}}" value="1" required></label>
+          <input type="hidden" name="count" value="1">
+          <input type="hidden" name="back" value="/item/{{.Product.Article}}">
           <button class="btn" type="submit">В корзину</button>
         </form>
       {{else}}

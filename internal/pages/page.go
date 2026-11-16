@@ -33,6 +33,8 @@ type page struct {
 	Product   *models.Product
 	Photos    []photoCard
 	Available int
+	InCart    int
+	CartID    string
 	Editing   bool
 	HasFile   bool
 	Photo     *models.Photo
@@ -63,9 +65,9 @@ type filterField struct {
 }
 
 type card struct {
-	ID, Article, Name, Type, Gender, Size, Price, Brand, Color, PhotoID string
-	HasFile                                                             bool
-	Stock, Left                                                         int
+	ID, Article, Name, Type, Gender, Size, Price, Brand, Color, PhotoID, CartID string
+	HasFile                                                                     bool
+	Stock, Left, InCart                                                         int
 }
 
 type photoCard struct {

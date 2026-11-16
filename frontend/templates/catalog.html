@@ -42,7 +42,15 @@
               <p class="price">{{.Price}}</p>
             </a>
             {{if eq $.Key "client"}}
-              {{if gt .Left 0}}
+              {{if gt .InCart 0}}
+                <form class="card-qty" method="post" action="/cart/count">
+                  <input type="hidden" name="id" value="{{.CartID}}">
+                  <input type="hidden" name="back" value="{{$.Return}}">
+                  <button type="submit" name="op" value="dec" aria-label="Меньше">−</button>
+                  <span>{{.InCart}}</span>
+                  <button type="submit" name="op" value="inc" aria-label="Больше"{{if lt .Left 1}} disabled{{end}}>+</button>
+                </form>
+              {{else if gt .Left 0}}
                 <form method="post" action="/cart/add">
                   <input type="hidden" name="product_id" value="{{.ID}}">
                   <input type="hidden" name="count" value="1">

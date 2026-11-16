@@ -154,6 +154,29 @@ footer { border-top: 1px solid var(--line); padding: 1.25rem 0 1.7rem; backgroun
 .card .price { margin-top: .3rem; font-weight: 650; }
 .card form, .card > a.btn { margin: .75rem .4rem 0; }
 .card .btn { width: calc(100% - .8rem); }
+.card-qty, .buy-qty {
+  display: flex;
+  align-items: stretch;
+  border: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--ink);
+  color: #fff;
+}
+.card-qty { width: calc(100% - .8rem); }
+.buy-qty { width: 100%; max-width: 280px; }
+.card-qty button, .card-qty span, .buy-qty button, .buy-qty span {
+  height: 2.55rem;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: transparent;
+  border: 0;
+}
+.card-qty button, .buy-qty button { flex: 0 0 2.7rem; font-size: 1.25rem; cursor: pointer; }
+.card-qty span, .buy-qty span { flex: 1; font-weight: 700; }
+.card-qty button:hover, .buy-qty button:hover { background: rgba(255,255,255,.12); }
+.card-qty button:disabled, .buy-qty button:disabled { opacity: .35; cursor: default; }
 .card-note { margin: .75rem .4rem .1rem; }
 .sku { color: var(--muted); font-size: .78rem; }
 .line-text { margin-top: .35rem; }

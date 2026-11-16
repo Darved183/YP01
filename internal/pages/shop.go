@@ -75,9 +75,10 @@ func (s *Pages) CartAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	productID := r.FormValue("product_id")
+	back := shopBack(r.FormValue("back"))
 	if _, err := s.Repo.GetProductByID(productID); err != nil {
 		setFlash(w, "Товар не найден")
-		goTo(w, r, "/catalog")
+		goTo(w, r, back)
 		return
 	}
 	count, _ := strconv.Atoi(r.FormValue("count"))
@@ -87,36 +88,33 @@ func (s *Pages) CartAdd(w http.ResponseWriter, r *http.Request) {
 	left := s.unreserved(productID)
 	if left < 1 {
 		setFlash(w, "Этого товара нет в наличии")
-		goTo(w, r, "/item/"+productID)
+		goTo(w, r, back)
 		return
 	}
 	if count > left {
 		setFlash(w, "На складе осталось "+strconv.Itoa(left))
-		goTo(w, r, "/item/"+productID)
+		goTo(w, r, back)
 		return
 	}
 	lines, err := s.Repo.GetCartByUser(p.User.ID)
 	if err != nil {
 		setFlash(w, "Не получилось положить товар в корзину")
-		goTo(w, r, "/item/"+productID)
+		goTo(w, r, back)
 		return
 	}
 	for _, line := range lines {
 		if line.ProductID == productID {
 			line.Count += count
-			setFlash(w, "Товар в корзине")
 			_ = s.Repo.PutCart(&line)
-			goTo(w, r, "/item/"+productID)
+			goTo(w, r, back)
 			return
 		}
 	}
 	err = s.Repo.CreateCart(&models.Cart{UserID: p.User.ID, ProductID: productID, Count: count})
 	if err != nil {
 		setFlash(w, "Не получилось положить товар в корзину")
-	} else {
-		setFlash(w, "Товар в корзине")
 	}
-	goTo(w, r, "/item/"+productID)
+	goTo(w, r, back)
 }
 
 func (s *Pages) CartCount(w http.ResponseWriter, r *http.Request) {
@@ -129,10 +127,14 @@ func (s *Pages) CartCount(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
+	back := "/cart"
+	if r.FormValue("back") != "" {
+		back = shopBack(r.FormValue("back"))
+	}
 	line, err := s.ownLine(p.User.ID, r.FormValue("id"))
 	if err != nil {
 		setFlash(w, "Позиция не найдена")
-		goTo(w, r, "/cart")
+		goTo(w, r, back)
 		return
 	}
 	if r.FormValue("op") == "dec" {
@@ -150,7 +152,7 @@ func (s *Pages) CartCount(w http.ResponseWriter, r *http.Request) {
 			_ = s.Repo.PutCart(line)
 		}
 	}
-	goTo(w, r, "/cart")
+	goTo(w, r, back)
 }
 
 func (s *Pages) CartRemove(w http.ResponseWriter, r *http.Request) {
