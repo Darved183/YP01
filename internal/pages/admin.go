@@ -17,7 +17,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Админка тоже обычные формы. Сохранение идёт в ту же базу, отдельного api тут нет.
 func (s *Pages) AdminProducts(w http.ResponseWriter, r *http.Request) {
 	p := s.base(w, r)
 	if p.Key != "admin" {
@@ -30,11 +29,15 @@ func (s *Pages) AdminProducts(w http.ResponseWriter, r *http.Request) {
 	p.Hint = "Добавление, правка и удаление каталога."
 	p.ActionHref = "/admin/products/new"
 	p.ActionLabel = "Новый товар"
-	f := database.ProductFilter{Page: pageNum(r), Limit: 6}
+	f := database.ProductFilter{Page: 1}
 	total, err := s.Repo.CountProducts(f)
 	if err != nil {
 		s.fail(w, p, "Ошибка", "Не получилось прочитать товары", err)
 		return
+	}
+	f.Limit = total
+	if f.Limit < 1 {
+		f.Limit = 1
 	}
 	products, err := s.Repo.GetProducts(f)
 	if err != nil {
@@ -44,12 +47,7 @@ func (s *Pages) AdminProducts(w http.ResponseWriter, r *http.Request) {
 	for _, item := range products {
 		p.Cards = append(p.Cards, s.cardOf(item))
 	}
-	p.Page = f.Page
-	p.Pages = pageCount(total, f.Limit)
-	p.RangeText = rangeText(f.Page, f.Limit, total)
-	p.PagePath = "/admin/products"
-	p.PrevPage = f.Page - 1
-	p.NextPage = f.Page + 1
+	p.RangeText = rangeText(1, total, total)
 	s.render(w, "products", p)
 }
 
@@ -87,7 +85,8 @@ func (s *Pages) ProductForm(w http.ResponseWriter, r *http.Request) {
 
 func (s *Pages) fillProductForm(p *page) error {
 	labels := []struct{ key, label string }{
-		{"type", "Тип"}, {"color", "Цвет"}, {"brand", "Бренд"},
+		{"type", "Тип"}, {"gender", "Пол"}, {"size", "Размер"},
+		{"color", "Цвет"}, {"brand", "Бренд"}, {"season", "Сезон"},
 	}
 	for _, item := range labels {
 		values, err := s.Repo.ProductField(item.key)
@@ -102,10 +101,7 @@ func (s *Pages) fillProductForm(p *page) error {
 			return err
 		}
 		for _, photo := range photos {
-			if !fileExists(photo.Filename) {
-				continue
-			}
-			p.Photos = append(p.Photos, photoCard{ID: photo.ID, Filename: photo.Filename, HasFile: true})
+			p.Photos = append(p.Photos, photoCard{ID: photo.ID, Filename: photo.Filename, HasFile: fileExists(photo.Filename)})
 		}
 	}
 	return nil
@@ -176,24 +172,9 @@ func readProduct(r *http.Request) (models.Product, string) {
 	if p.Name == "" || p.Type == "" || p.Gender == "" || p.Size == "" || p.Color == "" || p.Brand == "" || p.Season == "" {
 		return p, "Заполните все поля товара"
 	}
-	switch p.Gender {
-	case "женский", "мужской", "унисекс":
-	default:
-		return p, "Пол: женский, мужской или унисекс"
-	}
-	switch p.Size {
-	case "XS", "S", "M", "L", "XL":
-	default:
-		return p, "Размер: XS, S, M, L или XL"
-	}
-	switch p.Season {
-	case "лето", "зима", "демисезон", "всесезон":
-	default:
-		return p, "Сезон: лето, зима, демисезон или всесезон"
-	}
 	price, ok := parsePrice(r.FormValue("price"))
-	if !ok || price <= 0 {
-		return p, "Укажите цену больше нуля"
+	if !ok {
+		return p, "Укажите корректную цену"
 	}
 	p.Price = price
 	stock, err := strconv.Atoi(strings.TrimSpace(r.FormValue("stock")))
@@ -378,7 +359,7 @@ func (s *Pages) AdminUsers(w http.ResponseWriter, r *http.Request) {
 	p.ActionLabel = "Новый пользователь"
 	p.RoleID = r.URL.Query().Get("role")
 	if p.RoleID == "" {
-		p.Hint = "Полный список с страницами. Фильтр сверху оставляет одну роль."
+		p.Hint = "Все учётные записи"
 	} else {
 		p.Hint = "Показаны пользователи выбранной роли."
 	}
@@ -390,11 +371,15 @@ func (s *Pages) AdminUsers(w http.ResponseWriter, r *http.Request) {
 	for _, role := range roles {
 		p.Roles = append(p.Roles, roleRow{ID: role.ID, Name: role.Name, Selected: role.ID == p.RoleID})
 	}
-	f := database.UserFilter{Page: pageNum(r), Limit: 2, RoleID: p.RoleID}
+	f := database.UserFilter{Page: 1, RoleID: p.RoleID}
 	total, err := s.Repo.CountUsers(f)
 	if err != nil {
 		s.fail(w, p, "Ошибка", "Не получилось прочитать пользователей", err)
 		return
+	}
+	f.Limit = total
+	if f.Limit < 1 {
+		f.Limit = 1
 	}
 	users, err := s.Repo.GetUsers(f)
 	if err != nil {
@@ -413,13 +398,7 @@ func (s *Pages) AdminUsers(w http.ResponseWriter, r *http.Request) {
 		}
 		p.Users = append(p.Users, row)
 	}
-	p.Keep = keepQuery{Role: p.RoleID}
-	p.Page = f.Page
-	p.Pages = pageCount(total, f.Limit)
-	p.RangeText = rangeText(f.Page, f.Limit, total)
-	p.PagePath = "/admin/users"
-	p.PrevPage = f.Page - 1
-	p.NextPage = f.Page + 1
+	p.RangeText = rangeText(1, total, total)
 	s.render(w, "users", p)
 }
 
@@ -455,9 +434,6 @@ func (s *Pages) UserForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, role := range roles {
-		if skipRole(role.Name, role.ID, user.RoleID) {
-			continue
-		}
 		p.Roles = append(p.Roles, roleRow{ID: role.ID, Name: role.Name, Selected: role.ID == user.RoleID})
 	}
 	p.Email = user.Email
@@ -465,37 +441,6 @@ func (s *Pages) UserForm(w http.ResponseWriter, r *http.Request) {
 	p.Text = user.Name
 	p.RoleID = user.RoleID
 	p.Next = user.ID
-	s.render(w, "user_form", p)
-}
-
-func (s *Pages) showUserForm(w http.ResponseWriter, p page, id, name, email, phone, roleID, msg string) {
-	p.Error = msg
-	p.Text = name
-	p.Email = email
-	p.Buyer = phone
-	p.RoleID = roleID
-	p.Next = id
-	if id != "" {
-		p.Editing = true
-		p.Title = "Правка пользователя"
-		if user, err := s.Repo.GetUser(id); err == nil {
-			p.When = formatDate(user.RegistrationDate)
-		}
-	} else {
-		p.Title = "Новый пользователь"
-		p.Hint = "Администратор назначает любую роль."
-	}
-	roles, err := s.Repo.GetRoles()
-	if err != nil {
-		s.fail(w, p, "Ошибка", "Не получилось открыть форму", err)
-		return
-	}
-	for _, role := range roles {
-		if skipRole(role.Name, role.ID, roleID) {
-			continue
-		}
-		p.Roles = append(p.Roles, roleRow{ID: role.ID, Name: role.Name, Selected: role.ID == roleID})
-	}
 	s.render(w, "user_form", p)
 }
 
@@ -521,26 +466,15 @@ func (s *Pages) UserSave(w http.ResponseWriter, r *http.Request) {
 	if name == "" || email == "" || phone == "" || roleID == "" {
 		msg = "Заполните данные пользователя и роль"
 	} else if !validEmail(email) {
-		msg = "Почта должна быть вида имя@почта.ru"
-	} else if !validPhone(phone) {
-		msg = "Телефон укажите в формате +7 900 000-00-00"
+		msg = "Некорректная почта"
 	} else if id == "" && len(pass) < 4 {
 		msg = "Пароль должен быть не короче 4 символов"
 	} else if pass != "" && len(pass) < 4 {
 		msg = "Пароль должен быть не короче 4 символов"
 	}
 	if msg == "" {
-		role, err := s.Repo.GetRole(roleID)
-		kept := ""
-		if id != "" {
-			if current, err := s.Repo.GetUser(id); err == nil {
-				kept = current.RoleID
-			}
-		}
-		if err != nil {
+		if _, err := s.Repo.GetRole(roleID); err != nil {
 			msg = "Роль не найдена"
-		} else if skipRole(role.Name, role.ID, kept) {
-			msg = "Роль «Гость» не назначают учётной записи"
 		}
 	}
 	if msg == "" {
@@ -559,7 +493,12 @@ func (s *Pages) UserSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if msg != "" {
-		s.showUserForm(w, p, id, name, email, phone, roleID, msg)
+		setFlash(w, msg)
+		if id == "" {
+			goTo(w, r, "/admin/users/new")
+		} else {
+			goTo(w, r, "/admin/users/"+id)
+		}
 		return
 	}
 	if id == "" {
@@ -627,123 +566,4 @@ func (s *Pages) UserDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	setFlash(w, "Пользователь удалён")
 	goTo(w, r, "/admin/users")
-}
-
-func (s *Pages) AdminRoles(w http.ResponseWriter, r *http.Request) {
-	p := s.base(w, r)
-	if p.Key != "admin" {
-		p.Title = "Нет доступа"
-		p.Text = "Роли настраивает администратор."
-		s.render(w, "message", p)
-		return
-	}
-	p.Title = "Роли"
-	p.Hint = "Гость, клиент, менеджер и администратор уже есть. Свою роль можно добавить."
-	roles, err := s.Repo.GetRoles()
-	if err != nil {
-		s.fail(w, p, "Ошибка", "Не получилось прочитать роли", err)
-		return
-	}
-	for _, role := range roles {
-		p.Roles = append(p.Roles, roleRow{
-			ID: role.ID, Name: role.Name, Note: roleNote(role.Name), System: systemRole(role.Name),
-		})
-	}
-	s.render(w, "roles", p)
-}
-
-func (s *Pages) RoleSave(w http.ResponseWriter, r *http.Request) {
-	p := s.base(w, r)
-	if p.Key != "admin" {
-		p.Title = "Нет доступа"
-		p.Text = "Роли настраивает администратор."
-		s.render(w, "message", p)
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad form", http.StatusBadRequest)
-		return
-	}
-	name := strings.TrimSpace(r.FormValue("name"))
-	id := r.FormValue("id")
-	if name == "" {
-		setFlash(w, "Введите название роли")
-		goTo(w, r, "/admin/roles")
-		return
-	}
-	roles, err := s.Repo.GetRoles()
-	if err != nil {
-		setFlash(w, "Не получилось сохранить роль")
-		goTo(w, r, "/admin/roles")
-		return
-	}
-	for _, role := range roles {
-		if strings.EqualFold(role.Name, name) && role.ID != id {
-			setFlash(w, "Такая роль уже есть")
-			goTo(w, r, "/admin/roles")
-			return
-		}
-	}
-	if id == "" {
-		err = s.Repo.CreateRole(&models.Role{Name: name})
-		if err == nil {
-			setFlash(w, "Роль создана")
-		}
-	} else {
-		role, gerr := s.Repo.GetRole(id)
-		if gerr != nil {
-			setFlash(w, "Роль не найдена")
-			goTo(w, r, "/admin/roles")
-			return
-		}
-		if systemRole(role.Name) {
-			setFlash(w, "Название этой роли менять нельзя")
-			goTo(w, r, "/admin/roles")
-			return
-		}
-		role.Name = name
-		err = s.Repo.PutRole(role)
-		if err == nil {
-			setFlash(w, "Роль сохранена")
-		}
-	}
-	if err != nil {
-		setFlash(w, "Не получилось сохранить роль")
-	}
-	goTo(w, r, "/admin/roles")
-}
-
-func (s *Pages) RoleDelete(w http.ResponseWriter, r *http.Request) {
-	p := s.base(w, r)
-	if p.Key != "admin" {
-		p.Title = "Нет доступа"
-		p.Text = "Роли настраивает администратор."
-		s.render(w, "message", p)
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad form", http.StatusBadRequest)
-		return
-	}
-	role, err := s.Repo.GetRole(r.FormValue("id"))
-	if err != nil {
-		setFlash(w, "Роль не найдена")
-		goTo(w, r, "/admin/roles")
-		return
-	}
-	if systemRole(role.Name) {
-		setFlash(w, "Эту роль нельзя удалить")
-		goTo(w, r, "/admin/roles")
-		return
-	}
-	if err = s.Repo.DeleteRole(role.ID); err != nil {
-		if strings.Contains(err.Error(), "constraint") {
-			setFlash(w, "Сначала переведите пользователей на другую роль")
-		} else {
-			setFlash(w, "Не получилось удалить роль")
-		}
-	} else {
-		setFlash(w, "Роль удалена")
-	}
-	goTo(w, r, "/admin/roles")
 }

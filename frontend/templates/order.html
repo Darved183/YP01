@@ -6,8 +6,8 @@
     {{if .Staff}}<p>Клиент: {{.Buyer}}</p>{{end}}
     <div>
       {{if and .Staff (gt (len .Statuses) 1)}}
-        <form method="post" action="/orders/{{.Order.ID}}/status">
-          <input type="hidden" name="back" value="/orders/{{.Order.ID}}">
+        <form method="post" action="/orders/{{.Order.Number}}/status">
+          <input type="hidden" name="back" value="/orders/{{.Order.Number}}">
           <select name="status" aria-label="Статус заказа" onchange="this.form.submit()">
             {{$st := .Order.Status}}
             {{range .Statuses}}
@@ -29,7 +29,28 @@
       <tbody>
         {{range .Groups}}
           <tr>
-            <td>{{if .Missing}}Товар удалён{{else}}<a href="/item/{{.ProductID}}">{{.Name}}</a>{{end}}</td>
+            <td>
+              {{if .Missing}}
+                {{if .Article}}<p class="sku">Артикул {{.Article}}</p>{{end}}
+                <p>{{.Name}}</p>
+                {{if .Spec}}<p class="muted small">{{.Spec}}</p>{{end}}
+                {{if .Description}}<p class="line-text">{{.Description}}</p>{{end}}
+              {{else}}
+                <a class="order-item" href="/item/{{if .Article}}{{.Article}}{{else}}{{.ProductID}}{{end}}">
+                  {{if .HasFile}}
+                    <img class="thumb" alt="" src="/photo/{{.PhotoID}}">
+                  {{else}}
+                    <span class="swatch mini{{if light .Color}} light{{end}}" style="--c:{{color .Color}}"><span>{{.Brand}}</span></span>
+                  {{end}}
+                  <span class="order-copy">
+                    {{if .Article}}<span class="sku">Артикул {{.Article}}</span>{{end}}
+                    <span class="order-name">{{.Name}}</span>
+                    {{if .Spec}}<span class="muted small">{{.Spec}}</span>{{end}}
+                  </span>
+                </a>
+                {{if .Description}}<p class="line-text">{{.Description}}</p>{{end}}
+              {{end}}
+            </td>
             <td>{{.Count}}</td>
             <td>{{.Price}}</td>
             <td>{{.Sum}}</td>
@@ -41,7 +62,7 @@
   <p class="total">{{.Sum}}</p>
   <p class="muted small">Цена зафиксирована на момент покупки.</p>
   {{if .CanCancel}}
-    <form class="panel stack" method="post" action="/orders/{{.Order.ID}}/cancel">
+    <form class="panel stack" method="post" action="/orders/{{.Order.Number}}/cancel">
       <label>Комментарий<textarea name="comment" required maxlength="500" placeholder="Почему отменяете заказ"></textarea></label>
       <button class="btn danger" type="submit">Отменить заказ</button>
     </form>

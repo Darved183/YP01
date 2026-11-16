@@ -10,7 +10,6 @@ import (
 	"YP01/internal/models"
 )
 
-// Форма шлёт обычный POST. Пароль совпал — ставлю куку и возвращаю человека в каталог.
 func (s *Pages) Login(w http.ResponseWriter, r *http.Request) {
 	p := s.base(w, r)
 	p.Title = "Вход"
@@ -63,9 +62,9 @@ func (s *Pages) RegisterPost(w http.ResponseWriter, r *http.Request) {
 	if name == "" || email == "" || phone == "" {
 		msg = "Заполните имя, почту и телефон"
 	} else if !validEmail(email) {
-		msg = "Почта должна быть вида имя@почта.ru"
-	} else if !validPhone(phone) {
-		msg = "Телефон укажите в формате +7 900 000-00-00"
+		msg = "Некорректная почта"
+	} else if len(phone) < 5 {
+		msg = "Укажите телефон"
 	} else if len(pass) < 4 {
 		msg = "Пароль должен быть не короче 4 символов"
 	}

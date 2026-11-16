@@ -1,6 +1,6 @@
 {{define "content"}}
 <div class="catalog">
-  <form class="filters" method="get" action="/catalog">
+  <form class="filters" id="catalog-filters" method="get" action="/catalog">
     <h2>Фильтры</h2>
     {{range .Fields}}
       <label>{{.Label}}
@@ -13,30 +13,49 @@
         </select>
       </label>
     {{end}}
-    <label>Цена
-      <select name="sort" onchange="this.form.submit()">
-        <option value=""{{if eq $.Sort ""}} selected{{end}}>Обычный порядок</option>
-        <option value="price-asc"{{if eq $.Sort "price-asc"}} selected{{end}}>Сначала дешевле</option>
-        <option value="price-desc"{{if eq $.Sort "price-desc"}} selected{{end}}>Сначала дороже</option>
-      </select>
-    </label>
     <a class="btn ghost" href="/catalog">Сбросить</a>
   </form>
   <div>
-    <p class="muted small">{{.RangeText}}</p>
+    <div class="catalog-bar">
+      <p class="muted small">{{.RangeText}}</p>
+      <label>Цена
+        <select name="sort" form="catalog-filters" onchange="this.form.submit()">
+          <option value=""{{if eq .Sort ""}} selected{{end}}>Выберите значение</option>
+          <option value="price-asc"{{if eq .Sort "price-asc"}} selected{{end}}>Сначала дешевле</option>
+          <option value="price-desc"{{if eq .Sort "price-desc"}} selected{{end}}>Сначала дороже</option>
+        </select>
+      </label>
+    </div>
     {{if .Cards}}
       <div class="grid">
         {{range .Cards}}
-          <a class="card" href="/item/{{.ID}}">
-            {{if .HasFile}}
-              <img class="shot" alt="{{.Name}}" src="/photo/{{.PhotoID}}">
-            {{else}}
-              <div class="swatch{{if light .Color}} light{{end}}" style="--c:{{color .Color}}"><span>{{.Brand}}</span></div>
+          <article class="card">
+            <a class="card-main" href="/item/{{.Article}}">
+              {{if .HasFile}}
+                <img class="shot" alt="{{.Name}}" src="/photo/{{.PhotoID}}">
+              {{else}}
+                <div class="swatch{{if light .Color}} light{{end}}" style="--c:{{color .Color}}"><span>{{.Brand}}</span></div>
+              {{end}}
+              <h2>{{.Name}}</h2>
+              <p class="muted small">{{.Type}} · {{.Gender}} · {{.Size}}</p>
+              <p class="sku">Артикул {{.Article}}</p>
+              <p class="price">{{.Price}}</p>
+            </a>
+            {{if eq $.Key "client"}}
+              {{if gt .Left 0}}
+                <form method="post" action="/cart/add">
+                  <input type="hidden" name="product_id" value="{{.ID}}">
+                  <input type="hidden" name="count" value="1">
+                  <input type="hidden" name="back" value="{{$.Return}}">
+                  <button class="btn" type="submit">В корзину</button>
+                </form>
+              {{else}}
+                <p class="muted small card-note">Нет в наличии</p>
+              {{end}}
+            {{else if eq $.Key "guest"}}
+              <a class="btn ghost" href="/login?next={{$.Return}}">В корзину</a>
             {{end}}
-            <h2>{{.Name}}</h2>
-            <p class="muted small">{{.Type}} · {{.Gender}} · {{.Size}}</p>
-            <p class="price">{{.Price}}</p>
-          </a>
+          </article>
         {{end}}
       </div>
     {{else}}
@@ -45,7 +64,6 @@
         <p><a class="btn ghost" href="/catalog">Сбросить фильтры</a></p>
       </div>
     {{end}}
-    {{template "pager" .}}
   </div>
 </div>
 {{end}}

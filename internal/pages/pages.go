@@ -11,21 +11,16 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Страницы магазина. JSON по заданию остаётся в handlers.
-// Здесь браузер получает обычный html: данные из базы подставляются в шаблон.
-
 type Pages struct {
 	Repo  *database.Repository
 	pages map[string]*template.Template
 }
 
-// Шаблоны читаю один раз при запуске.
-// layout.html — общая оболочка, второй файл — сама страница.
 func New(repo *database.Repository) (*Pages, error) {
 	s := &Pages{Repo: repo, pages: map[string]*template.Template{}}
 	names := []string{
 		"catalog", "product", "photo", "login", "register", "cart",
-		"orders", "order", "products", "product_form", "users", "user_form", "roles", "message",
+		"orders", "order", "products", "product_form", "users", "user_form", "message",
 	}
 	funcs := template.FuncMap{
 		"color": colorStyle,
@@ -76,12 +71,8 @@ func (s *Pages) Register(r *mux.Router) {
 	r.HandleFunc("/admin/users/save", s.UserSave).Methods("POST")
 	r.HandleFunc("/admin/users/delete", s.UserDelete).Methods("POST")
 	r.HandleFunc("/admin/users/{id}", s.UserForm).Methods("GET")
-	r.HandleFunc("/admin/roles", s.AdminRoles).Methods("GET")
-	r.HandleFunc("/admin/roles/save", s.RoleSave).Methods("POST")
-	r.HandleFunc("/admin/roles/delete", s.RoleDelete).Methods("POST")
 }
 
-// В layout есть {{template "content" .}}. Туда попадает кусок из файла страницы.
 func (s *Pages) render(w http.ResponseWriter, name string, p page) {
 	t := s.pages[name]
 	if t == nil {

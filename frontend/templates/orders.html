@@ -28,6 +28,7 @@
       <table>
         <thead>
           <tr>
+            <th>№</th>
             <th>Дата</th>
             {{if .Staff}}<th>Клиент</th>{{end}}
             <th>Сумма</th>
@@ -38,12 +39,13 @@
         <tbody>
           {{range .Orders}}
             <tr>
+              <td class="nowrap">{{.Number}}</td>
               <td class="nowrap">{{.When}}</td>
               {{if $.Staff}}<td>{{.Buyer}}</td>{{end}}
               <td class="nowrap">{{.Sum}}</td>
               <td>
                 {{if and $.Staff (gt (len .Next) 1)}}
-                  <form method="post" action="/orders/{{.ID}}/status">
+                  <form method="post" action="/orders/{{.Number}}/status">
                     <input type="hidden" name="back" value="/orders">
                     <select name="status" aria-label="Статус заказа" onchange="this.form.submit()">
                       {{$st := .Status}}
@@ -56,7 +58,7 @@
                   <span class="status" data-status="{{.Status}}">{{.Status}}</span>
                 {{end}}
               </td>
-              <td class="nowrap"><a href="/orders/{{.ID}}">Открыть</a></td>
+              <td class="nowrap"><a href="/orders/{{.Number}}">Открыть</a></td>
             </tr>
           {{end}}
         </tbody>
@@ -65,6 +67,5 @@
   {{else}}
     <div class="panel"><p>Заказов по этому отбору нет.</p></div>
   {{end}}
-  {{template "pager" .}}
 {{end}}
 {{end}}

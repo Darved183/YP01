@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -90,6 +91,113 @@ func ensureSeasons(db *sqlx.DB) error {
 	return err
 }
 
+// Галочки прав лежат в roles.rights строкой. На вход в магазин они не влияют.
+func ensureRoleRights(db *sqlx.DB) error {
+	ok, err := hasColumn(db, "roles", "rights")
+	if err != nil || ok {
+		return err
+	}
+	_, err = db.Exec(`ALTER TABLE roles ADD COLUMN rights TEXT NOT NULL DEFAULT ''`)
+	return err
+}
+
+func hasColumn(db *sqlx.DB, table, column string) (bool, error) {
+	var n int
+	err := db.Get(&n, `SELECT COUNT(*) FROM pragma_table_info('`+table+`') WHERE name = ?`, column)
+	return n > 0, err
+}
+
+// Артикул короткий: его видит покупатель. Длинный id остаётся в базе и на сайт не выводится.
+func ensureArticles(db *sqlx.DB) error {
+	ok, err := hasColumn(db, "products", "article")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		if _, err = db.Exec(`ALTER TABLE products ADD COLUMN article TEXT NOT NULL DEFAULT ''`); err != nil {
+			return err
+		}
+	}
+	var ids []string
+	if err = db.Select(&ids, `SELECT id FROM products WHERE article = '' ORDER BY id`); err != nil {
+		return err
+	}
+	var max int
+	if err = db.Get(&max, `SELECT COALESCE(MAX(CAST(article AS INTEGER)), 1000) FROM products WHERE article != ''`); err != nil {
+		return err
+	}
+	for _, id := range ids {
+		max++
+		if _, err = db.Exec(`UPDATE products SET article = ? WHERE id = ?`, strconv.Itoa(max), id); err != nil {
+			return err
+		}
+	}
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_products_article ON products(article)`)
+	return err
+}
+
+// Номер заказа для человека. В списках и в адресе страницы он, а не id.
+func ensureOrderNumbers(db *sqlx.DB) error {
+	ok, err := hasColumn(db, "orders", "number")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		if _, err = db.Exec(`ALTER TABLE orders ADD COLUMN number INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return err
+		}
+	}
+	var ids []string
+	if err = db.Select(&ids, `SELECT id FROM orders WHERE number = 0 ORDER BY date_time, id`); err != nil {
+		return err
+	}
+	var max int
+	if err = db.Get(&max, `SELECT COALESCE(MAX(number), 0) FROM orders`); err != nil {
+		return err
+	}
+	if max < 1000 {
+		max = 1000
+	}
+	for _, id := range ids {
+		max++
+		if _, err = db.Exec(`UPDATE orders SET number = ? WHERE id = ?`, max, id); err != nil {
+			return err
+		}
+	}
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_number ON orders(number)`)
+	return err
+}
+
+func ensureOrderText(db *sqlx.DB) error {
+	cols := []struct{ name, ddl string }{
+		{"name", `ALTER TABLE order_items ADD COLUMN name TEXT NOT NULL DEFAULT ''`},
+		{"description", `ALTER TABLE order_items ADD COLUMN description TEXT NOT NULL DEFAULT ''`},
+		{"article", `ALTER TABLE order_items ADD COLUMN article TEXT NOT NULL DEFAULT ''`},
+		{"spec", `ALTER TABLE order_items ADD COLUMN spec TEXT NOT NULL DEFAULT ''`},
+	}
+	for _, col := range cols {
+		ok, err := hasColumn(db, "order_items", col.name)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			if _, err = db.Exec(col.ddl); err != nil {
+				return err
+			}
+		}
+	}
+	_, err := db.Exec(`
+		UPDATE order_items SET
+			name = (SELECT name FROM products WHERE products.id = order_items.product_id),
+			description = (SELECT description FROM products WHERE products.id = order_items.product_id),
+			article = (SELECT article FROM products WHERE products.id = order_items.product_id),
+			spec = (SELECT size || ' · ' || color FROM products WHERE products.id = order_items.product_id)
+		WHERE name = ''
+		  AND EXISTS (SELECT 1 FROM products WHERE products.id = order_items.product_id)
+	`)
+	return err
+}
+
 func ensureComment(db *sqlx.DB) error {
 	var n int
 	if err := db.Get(&n, `SELECT COUNT(*) FROM pragma_table_info('orders') WHERE name = 'comment'`); err != nil {
@@ -155,9 +263,9 @@ func insertDemo(tx *sqlx.Tx) error {
 	for i, p := range products {
 		id := nid("c0000000-0000-4000-8000", i+1)
 		_, err := tx.Exec(`
-			INSERT INTO products (id, name, type, gender, size, color, description, brand, season, price, stock)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, id, p.name, p.typ, p.gender, p.size, p.color, p.desc, p.brand, p.season, p.price, p.stock)
+			INSERT INTO products (id, article, name, type, gender, size, color, description, brand, season, price, stock)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`, id, strconv.Itoa(1001+i), p.name, p.typ, p.gender, p.size, p.color, p.desc, p.brand, p.season, p.price, p.stock)
 		if err != nil {
 			return err
 		}
@@ -188,13 +296,16 @@ func insertDemo(tx *sqlx.Tx) error {
 		return err
 	}
 
-	orders := []struct{ id, user, date, status string }{
-		{nid("f0000000-0000-4000-8000", 1), anna, "2026-09-15T11:20:00", "Отменён"},
-		{nid("f0000000-0000-4000-8000", 2), anna, "2026-10-28T16:40:00", "В работе"},
-		{nid("f0000000-0000-4000-8000", 3), maria, "2026-11-05T13:05:00", "Готов к выдаче"},
+	orders := []struct {
+		id, user, date, status string
+		number                 int
+	}{
+		{nid("f0000000-0000-4000-8000", 1), anna, "2026-09-15T11:20:00", "Отменён", 1001},
+		{nid("f0000000-0000-4000-8000", 2), anna, "2026-10-28T16:40:00", "В работе", 1002},
+		{nid("f0000000-0000-4000-8000", 3), maria, "2026-11-05T13:05:00", "Готов к выдаче", 1003},
 	}
 	for _, o := range orders {
-		_, err = tx.Exec(`INSERT INTO orders (id, user_id, date_time, status) VALUES (?, ?, ?, ?)`, o.id, o.user, o.date, o.status)
+		_, err = tx.Exec(`INSERT INTO orders (id, number, user_id, date_time, status) VALUES (?, ?, ?, ?, ?)`, o.id, o.number, o.user, o.date, o.status)
 		if err != nil {
 			return err
 		}

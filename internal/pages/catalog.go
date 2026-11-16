@@ -15,8 +15,7 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 	p.Hint = "Одежда на каждый день."
 	q := r.URL.Query()
 	f := database.ProductFilter{
-		Page:   pageNum(r),
-		Limit:  6,
+		Page:   1,
 		Type:   q.Get("type"),
 		Gender: q.Get("gender"),
 		Size:   q.Get("size"),
@@ -52,14 +51,14 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 			Key: item.key, Label: item.label, Current: cur, Options: sortOptions(item.key, values),
 		})
 	}
-	p.Keep = keepQuery{
-		Type: f.Type, Gender: f.Gender, Size: f.Size, Color: f.Color,
-		Brand: f.Brand, Season: f.Season, Sort: p.Sort,
-	}
 	total, err := s.Repo.CountProducts(f)
 	if err != nil {
 		s.fail(w, p, "Ошибка", "Не получилось прочитать каталог", err)
 		return
+	}
+	f.Limit = total
+	if f.Limit < 1 {
+		f.Limit = 1
 	}
 	products, err := s.Repo.GetProducts(f)
 	if err != nil {
@@ -69,20 +68,19 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 	for _, item := range products {
 		p.Cards = append(p.Cards, s.cardOf(item))
 	}
-	p.Page = f.Page
-	p.Pages = pageCount(total, f.Limit)
-	p.RangeText = rangeText(f.Page, f.Limit, total)
-	p.PagePath = "/catalog"
-	p.PrevPage = f.Page - 1
-	p.NextPage = f.Page + 1
+	p.RangeText = rangeText(1, total, total)
+	p.Return = r.URL.RequestURI()
+	if p.Return == "" || p.Return == "/" {
+		p.Return = "/catalog"
+	}
 	s.render(w, "catalog", p)
 }
 
 func (s *Pages) cardOf(item models.Product) card {
 	c := card{
-		ID: item.ID, Name: item.Name, Type: item.Type, Gender: item.Gender,
+		ID: item.ID, Article: item.Article, Name: item.Name, Type: item.Type, Gender: item.Gender,
 		Size: item.Size, Price: money(item.Price), Brand: item.Brand, Color: item.Color,
-		Stock: item.Stock,
+		Stock: item.Stock, Left: s.unreserved(item.ID),
 	}
 	photos, err := s.Repo.PhotosByProduct(item.ID)
 	if err != nil {
@@ -100,7 +98,7 @@ func (s *Pages) cardOf(item models.Product) card {
 
 func (s *Pages) Product(w http.ResponseWriter, r *http.Request) {
 	p := s.base(w, r)
-	item, err := s.Repo.GetProductByID(mux.Vars(r)["id"])
+	item, err := s.Repo.FindProduct(mux.Vars(r)["id"])
 	if err != nil {
 		p.Title = "Товар не найден"
 		p.Text = "Такой страницы нет."

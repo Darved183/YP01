@@ -2,6 +2,7 @@ package models
 
 type Product struct {
 	ID          string  `json:"id" db:"id"`
+	Article     string  `json:"article" db:"article"`
 	Name        string  `json:"name" db:"name"`
 	Type        string  `json:"type" db:"type"`
 	Gender      string  `json:"gender" db:"gender"`
@@ -21,8 +22,9 @@ type Photo struct {
 }
 
 type Role struct {
-	ID   string `json:"id" db:"id"`
-	Name string `json:"name" db:"name"`
+	ID     string `json:"id" db:"id"`
+	Name   string `json:"name" db:"name"`
+	Rights string `json:"-" db:"rights"`
 }
 
 type User struct {
@@ -44,6 +46,7 @@ type Cart struct {
 
 type Order struct {
 	ID       string `json:"id" db:"id"`
+	Number   int    `json:"number" db:"number"`
 	UserID   string `json:"user_id" db:"user_id"`
 	DateTime string `json:"date_time" db:"date_time"`
 	Status   string `json:"status" db:"status"`
@@ -51,8 +54,12 @@ type Order struct {
 }
 
 type OrderItem struct {
-	ID        string  `json:"id" db:"id"`
-	OrderID   string  `json:"order_id" db:"order_id"`
-	ProductID string  `json:"product_id" db:"product_id"`
-	Price     float64 `json:"price" db:"price"`
+	ID          string  `json:"id" db:"id"`
+	OrderID     string  `json:"order_id" db:"order_id"`
+	ProductID   string  `json:"product_id" db:"product_id"`
+	Price       float64 `json:"price" db:"price"`
+	Name        string  `json:"name" db:"name"`
+	Description string  `json:"description" db:"description"`
+	Article     string  `json:"article" db:"article"`
+	Spec        string  `json:"spec" db:"spec"`
 }

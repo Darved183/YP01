@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"YP01/internal/models"
@@ -37,11 +38,27 @@ func (r *Repository) CreateProduct(p *models.Product) error {
 	if p.ID == "" {
 		p.ID = uuid.NewString()
 	}
+	if p.Article == "" {
+		article, err := r.nextArticle()
+		if err != nil {
+			return err
+		}
+		p.Article = article
+	}
 	_, err := r.DB.NamedExec(`
-		INSERT INTO products (id, name, type, gender, size, color, description, brand, season, price, stock)
-		VALUES (:id, :name, :type, :gender, :size, :color, :description, :brand, :season, :price, :stock)
+		INSERT INTO products (id, article, name, type, gender, size, color, description, brand, season, price, stock)
+		VALUES (:id, :article, :name, :type, :gender, :size, :color, :description, :brand, :season, :price, :stock)
 	`, p)
 	return err
+}
+
+func (r *Repository) nextArticle() (string, error) {
+	var n int
+	err := r.DB.Get(&n, `SELECT COALESCE(MAX(CAST(article AS INTEGER)), 1000) FROM products WHERE article != ''`)
+	if err != nil {
+		return "", err
+	}
+	return strconv.Itoa(n + 1), nil
 }
 
 func productWhere(f ProductFilter) (string, []interface{}) {
@@ -78,7 +95,7 @@ func productWhere(f ProductFilter) (string, []interface{}) {
 func (r *Repository) GetProducts(f ProductFilter) ([]models.Product, error) {
 	var products []models.Product
 	where, args := productWhere(f)
-	query := `SELECT id, name, type, gender, size, color, description, brand, season, price, stock FROM products` + where
+	query := `SELECT id, article, name, type, gender, size, color, description, brand, season, price, stock FROM products` + where
 
 	if strings.EqualFold(f.Sort, "price") {
 		order := "ASC"
@@ -127,6 +144,16 @@ func (r *Repository) GetProductByID(id string) (*models.Product, error) {
 		return nil, err
 	}
 	return &p, nil
+}
+
+// Сначала артикул, потом id: старые ссылки с id тоже открываются.
+func (r *Repository) FindProduct(key string) (*models.Product, error) {
+	var p models.Product
+	err := r.DB.Get(&p, `SELECT * FROM products WHERE article = ?`, key)
+	if err == nil {
+		return &p, nil
+	}
+	return r.GetProductByID(key)
 }
 
 func (r *Repository) PutProduct(p *models.Product) error {
@@ -185,7 +212,7 @@ func (r *Repository) CreateRole(role *models.Role) error {
 	if role.ID == "" {
 		role.ID = uuid.NewString()
 	}
-	_, err := r.DB.NamedExec(`INSERT INTO roles (id, name) VALUES (:id, :name)`, role)
+	_, err := r.DB.NamedExec(`INSERT INTO roles (id, name, rights) VALUES (:id, :name, :rights)`, role)
 	return err
 }
 
@@ -196,7 +223,7 @@ func (r *Repository) GetRoles() ([]models.Role, error) {
 }
 
 func (r *Repository) PutRole(role *models.Role) error {
-	_, err := r.DB.NamedExec(`UPDATE roles SET name = :name WHERE id = :id`, role)
+	_, err := r.DB.NamedExec(`UPDATE roles SET name = :name, rights = :rights WHERE id = :id`, role)
 	return err
 }
 
@@ -359,10 +386,27 @@ func (r *Repository) CreateOrder(o *models.Order) error {
 	if o.ID == "" {
 		o.ID = uuid.NewString()
 	}
+	if o.Number == 0 {
+		n, err := r.nextOrderNumber()
+		if err != nil {
+			return err
+		}
+		o.Number = n
+	}
 	_, err := r.DB.NamedExec(`
-		INSERT INTO orders (id, user_id, date_time, status, comment) VALUES (:id, :user_id, :date_time, :status, :comment)
+		INSERT INTO orders (id, number, user_id, date_time, status, comment)
+		VALUES (:id, :number, :user_id, :date_time, :status, :comment)
 	`, o)
 	return err
+}
+
+func (r *Repository) nextOrderNumber() (int, error) {
+	var n int
+	err := r.DB.Get(&n, `SELECT COALESCE(MAX(number), 0) FROM orders`)
+	if n < 1000 {
+		n = 1000
+	}
+	return n + 1, err
 }
 
 func (r *Repository) GetOrders(f OrderFilter) ([]models.Order, error) {
@@ -423,6 +467,17 @@ func (r *Repository) GetOrder(id string) (*models.Order, error) {
 		return nil, err
 	}
 	return &o, nil
+}
+
+// Номер заказа в адресе страницы. Старая ссылка с id тоже открывается.
+func (r *Repository) FindOrder(key string) (*models.Order, error) {
+	if n, err := strconv.Atoi(key); err == nil && n > 0 {
+		var o models.Order
+		if err = r.DB.Get(&o, `SELECT * FROM orders WHERE number = ?`, n); err == nil {
+			return &o, nil
+		}
+	}
+	return r.GetOrder(key)
 }
 
 func (r *Repository) PutOrder(o *models.Order) error {

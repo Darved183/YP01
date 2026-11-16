@@ -22,16 +22,13 @@ type page struct {
 	RoleName, Key, Next, Email            string
 	CartCount                             int
 	NavCatalog, NavOrders, NavCart        bool
-	NavProducts, NavUsers, NavRoles       bool
+	NavProducts, NavUsers                 bool
 
-	Fields             []filterField
-	Sort               string
-	Cards              []card
-	RangeText          string
-	Page, Pages        int
-	PagePath           string
-	PrevPage, NextPage int
-	Keep               keepQuery
+	Fields    []filterField
+	Sort      string
+	Cards     []card
+	RangeText string
+	Return    string
 
 	Product   *models.Product
 	Photos    []photoCard
@@ -65,9 +62,9 @@ type filterField struct {
 }
 
 type card struct {
-	ID, Name, Type, Gender, Size, Price, Brand, Color, PhotoID string
-	HasFile                                                    bool
-	Stock                                                      int
+	ID, Article, Name, Type, Gender, Size, Price, Brand, Color, PhotoID string
+	HasFile                                                             bool
+	Stock, Left                                                         int
 }
 
 type photoCard struct {
@@ -76,20 +73,22 @@ type photoCard struct {
 }
 
 type cartLine struct {
-	ID, ProductID, Name, Meta, Price, Sum, Color, Brand string
-	Count                                               int
-	Missing                                             bool
+	ID, ProductID, Article, Name, Meta, Price, Sum, Color, Brand string
+	Count                                                        int
+	Missing                                                      bool
 }
 
 type orderRow struct {
 	ID, When, Buyer, Sum, Status string
+	Number                       int
 	Next                         []string
 }
 
 type itemGroup struct {
-	Name, ProductID, Price, Sum string
-	Count                       int
-	Missing                     bool
+	Name, ProductID, Price, Sum, Article, Description, Spec string
+	PhotoID, Color, Brand                                   string
+	Count                                                   int
+	Missing, HasFile                                        bool
 }
 
 type userRow struct {
@@ -97,9 +96,8 @@ type userRow struct {
 }
 
 type roleRow struct {
-	ID, Name, Note string
-	System         bool
-	Selected       bool
+	ID, Name string
+	Selected bool
 }
 
 func (s *Pages) base(w http.ResponseWriter, r *http.Request) page {
@@ -131,8 +129,6 @@ func (s *Pages) base(w http.ResponseWriter, r *http.Request) page {
 		p.NavProducts = true
 	case strings.HasPrefix(p.Path, "/admin/users"):
 		p.NavUsers = true
-	case strings.HasPrefix(p.Path, "/admin/roles"):
-		p.NavRoles = true
 	}
 	p.Flash = takeFlash(w, r)
 	return p
@@ -179,22 +175,6 @@ func systemRole(name string) bool {
 		return true
 	default:
 		return false
-	}
-}
-
-func roleNote(name string) string {
-	switch roleKey(name) {
-	case "client":
-		return "Покупает в каталоге и видит свои заказы"
-	case "manager":
-		return "Ведёт заказы клиентов"
-	case "admin":
-		return "Товары, пользователи и заказы"
-	default:
-		if systemRole(name) {
-			return "Каталог без входа. Учёток с этой ролью не делают"
-		}
-		return "Смотрит каталог, заказы не оформляет"
 	}
 }
 
@@ -260,25 +240,6 @@ func safeNext(s string) string {
 	return s
 }
 
-func pageNum(r *http.Request) int {
-	n, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if n < 1 {
-		return 1
-	}
-	return n
-}
-
-func pageCount(total, limit int) int {
-	if limit < 1 {
-		limit = 10
-	}
-	n := (total + limit - 1) / limit
-	if n < 1 {
-		return 1
-	}
-	return n
-}
-
 func rangeText(page, limit, total int) string {
 	if total == 0 {
 		return "Ничего не найдено"
@@ -294,12 +255,19 @@ func rangeText(page, limit, total int) string {
 	return fmt.Sprintf("Показано %d–%d из %d", from, to, total)
 }
 
-// Фильтры, которые надо сохранить при переходе на другую страницу.
-// В шаблоне имя параметра написано текстом: если склеить «page=2» заранее,
-// html прячет знак «=» и ссылка «Дальше» не меняет страницу.
-type keepQuery struct {
-	Type, Gender, Size, Color, Brand, Season, Sort string
-	Role, Status, From, To                         string
+// Куда вернуть после «В корзину»: каталог или карточка товара, не чужой адрес.
+func shopBack(path string) string {
+	if strings.ContainsAny(path, "\r\n") || strings.HasPrefix(path, "//") || !strings.HasPrefix(path, "/") {
+		return "/catalog"
+	}
+	u, err := url.Parse(path)
+	if err != nil || u.Host != "" || u.Scheme != "" || strings.Contains(u.Path, "..") {
+		return "/catalog"
+	}
+	if u.Path == "/" || u.Path == "/catalog" || strings.HasPrefix(u.Path, "/item/") {
+		return path
+	}
+	return "/catalog"
 }
 
 func money(v float64) string {

@@ -45,6 +45,7 @@
     {{if .Product.Description}}<p>{{.Product.Description}}</p>{{end}}
     <p class="muted">В наличии: {{.Available}} шт.</p>
     <dl class="specs">
+      <div><dt>Артикул</dt><dd>{{.Product.Article}}</dd></div>
       <div><dt>Тип</dt><dd>{{.Product.Type}}</dd></div>
       <div><dt>Пол</dt><dd>{{.Product.Gender}}</dd></div>
       <div><dt>Размер</dt><dd>{{.Product.Size}}</dd></div>
@@ -56,8 +57,8 @@
       <div class="panel stack">
         <p>Чтобы положить вещь в корзину, войдите в аккаунт.</p>
         <p class="row">
-          <a class="btn" href="/login?next=/item/{{.Product.ID}}">Войти</a>
-          <a class="btn ghost" href="/register?next=/item/{{.Product.ID}}">Регистрация</a>
+          <a class="btn" href="/login?next=/item/{{.Product.Article}}">Войти</a>
+          <a class="btn ghost" href="/register?next=/item/{{.Product.Article}}">Регистрация</a>
         </p>
       </div>
     {{else if eq .Key "client"}}

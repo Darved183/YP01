@@ -91,7 +91,23 @@ func Load() (*sqlx.DB, error) {
 		db.Close()
 		return nil, err
 	}
+	if err = ensureRoleRights(db); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err = ensureSeasons(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = ensureArticles(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = ensureOrderNumbers(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = ensureOrderText(db); err != nil {
 		db.Close()
 		return nil, err
 	}

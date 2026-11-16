@@ -20,7 +20,6 @@ type UserHandler struct {
 func (h *UserHandler) Register(r *mux.Router) {
 	r.HandleFunc("/user", h.Create).Methods("POST")
 	r.HandleFunc("/user", h.List).Methods("GET")
-	// этот путь должен быть выше /user/{id}, иначе role воспримется как id
 	r.HandleFunc("/user/role/{id}", h.ByRole).Methods("GET")
 	r.HandleFunc("/user/{id}", h.Update).Methods("PUT")
 	r.HandleFunc("/user/{id}", h.Delete).Methods("DELETE")

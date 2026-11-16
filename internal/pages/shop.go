@@ -13,7 +13,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Корзина и заказы. Пишем в те же таблицы, что и json-ручки /cart и /order.
 func (s *Pages) Cart(w http.ResponseWriter, r *http.Request) {
 	p := s.base(w, r)
 	if p.Key != "client" {
@@ -23,7 +22,7 @@ func (s *Pages) Cart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.Title = "Корзина"
-	p.Hint = "Проверьте состав и оформите заказ."
+	p.Hint = "Сюда попадают товары текущего клиента."
 	s.fillCart(&p)
 	s.render(w, "cart", p)
 }
@@ -308,10 +307,10 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 	p.Staff = p.Key == "manager" || p.Key == "admin"
 	if p.Staff {
 		p.Title = "Заказы"
-		p.Hint = "Статус идёт по шагам. Отменить можно, пока заказ не готов к выдаче."
+		p.Hint = ""
 	} else {
 		p.Title = "Мои заказы"
-		p.Hint = "Отменить свой заказ можно, пока его не подготовили к выдаче."
+		p.Hint = "Только ваши заказы. Статус меняет магазин."
 	}
 	q := r.URL.Query()
 	p.Status = q.Get("status")
@@ -324,7 +323,7 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	f := database.OrderFilter{
-		Page: pageNum(r), Limit: 2, Status: p.Status, StartDate: p.From, EndDate: endOfDay(p.To),
+		Page: 1, Status: p.Status, StartDate: p.From, EndDate: endOfDay(p.To),
 	}
 	if !p.Staff {
 		f.UserID = p.User.ID
@@ -334,14 +333,22 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, p, "Ошибка", "Не получилось прочитать заказы", err)
 		return
 	}
+	f.Limit = total
+	if f.Limit < 1 {
+		f.Limit = 1
+	}
 	orders, err := s.Repo.GetOrders(f)
 	if err != nil {
 		s.fail(w, p, "Ошибка", "Не получилось прочитать заказы", err)
 		return
 	}
 	for _, order := range orders {
-		row := orderRow{ID: order.ID, When: formatDate(order.DateTime), Status: order.Status, Sum: money(s.orderSum(order.ID)), Next: nextStatuses(order.Status)}
+		row := orderRow{
+			ID: order.ID, Number: order.Number, When: formatDate(order.DateTime),
+			Status: order.Status, Sum: money(s.orderSum(order.ID)),
+		}
 		if p.Staff {
+			row.Next = p.Statuses
 			if buyer, err := s.Repo.GetUser(order.UserID); err == nil {
 				row.Buyer = buyer.Name
 			} else {
@@ -350,13 +357,7 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 		}
 		p.Orders = append(p.Orders, row)
 	}
-	p.Keep = keepQuery{Status: p.Status, From: p.From, To: p.To}
-	p.Page = f.Page
-	p.Pages = pageCount(total, f.Limit)
-	p.RangeText = rangeText(f.Page, f.Limit, total)
-	p.PagePath = "/orders"
-	p.PrevPage = f.Page - 1
-	p.NextPage = f.Page + 1
+	p.RangeText = rangeText(1, total, total)
 	s.render(w, "orders", p)
 }
 
@@ -372,9 +373,49 @@ func (s *Pages) orderSum(id string) float64 {
 	return sum
 }
 
+func (s *Pages) fillGroup(g *itemGroup, item models.OrderItem) {
+	g.Name = item.Name
+	g.Description = item.Description
+	g.Article = item.Article
+	g.Spec = item.Spec
+	prod, err := s.Repo.GetProductByID(item.ProductID)
+	if err != nil {
+		if g.Name == "" {
+			g.Name = "Товар удалён"
+		}
+		g.Missing = true
+		return
+	}
+	if g.Name == "" {
+		g.Name = prod.Name
+	}
+	if g.Description == "" {
+		g.Description = prod.Description
+	}
+	if g.Article == "" {
+		g.Article = prod.Article
+	}
+	if g.Spec == "" && (prod.Size != "" || prod.Color != "") {
+		g.Spec = prod.Size + " · " + prod.Color
+	}
+	g.Color = prod.Color
+	g.Brand = prod.Brand
+	photos, err := s.Repo.PhotosByProduct(prod.ID)
+	if err != nil {
+		return
+	}
+	for _, photo := range photos {
+		if fileExists(photo.Filename) {
+			g.HasFile = true
+			g.PhotoID = photo.ID
+			return
+		}
+	}
+}
+
 func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 	p := s.base(w, r)
-	order, err := s.Repo.GetOrder(mux.Vars(r)["id"])
+	order, err := s.Repo.FindOrder(mux.Vars(r)["id"])
 	if err != nil {
 		p.Title = "Заказ не найден"
 		p.Text = "Такой страницы нет."
@@ -396,13 +437,13 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 	}
 	p.Title = "Заказ"
 	if p.Staff {
-		p.Hint = "Статус идёт по очереди. Отменить можно, пока заказ не готов к выдаче."
+		p.Hint = "Здесь можно сменить статус."
 	}
 	p.Order = order
 	p.Comment = order.Comment
 	p.CanCancel = !p.Staff && order.Status != "Отменён" && order.Status != "Готов к выдаче"
 	p.When = formatDate(order.DateTime)
-	p.Statuses = nextStatuses(order.Status)
+	p.Statuses = []string{"Принят", "В работе", "Собран", "Готов к выдаче", "Отменён"}
 	if buyer, err := s.Repo.GetUser(order.UserID); err == nil {
 		p.Buyer = buyer.Name
 	} else {
@@ -428,16 +469,11 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		g := itemGroup{ProductID: item.ProductID, Price: money(item.Price), Count: 1}
-		if prod, err := s.Repo.GetProductByID(item.ProductID); err == nil {
-			g.Name = prod.Name
-		} else {
-			g.Name = "Товар удалён"
-			g.Missing = true
-		}
+		s.fillGroup(&g, item)
 		p.Groups = append(p.Groups, g)
 	}
 	for i := range p.Groups {
-		// сумма строки считается в шаблоне через Count, цена уже строкой, посчитаем здесь
+
 		price := 0.0
 		itemsSame := 0
 		for _, item := range items {
@@ -465,15 +501,15 @@ func (s *Pages) OrderStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := mux.Vars(r)["id"]
-	order, err := s.Repo.GetOrder(id)
+	order, err := s.Repo.FindOrder(id)
 	if err != nil {
 		setFlash(w, "Заказ не найден")
 		goTo(w, r, "/orders")
 		return
 	}
 	status := r.FormValue("status")
-	if !statusStep(order.Status, status) {
-		setFlash(w, "Так статус не меняют: только следующий шаг или отмена, пока заказ не готов к выдаче")
+	if !statusOk(status) {
+		setFlash(w, "Неизвестный статус")
 		goTo(w, r, "/orders/"+id)
 		return
 	}
@@ -515,7 +551,7 @@ func (s *Pages) OrderCancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := mux.Vars(r)["id"]
-	order, err := s.Repo.GetOrder(id)
+	order, err := s.Repo.FindOrder(id)
 	if err != nil || order.UserID != p.User.ID {
 		setFlash(w, "Заказ не найден")
 		goTo(w, r, "/orders")
@@ -556,24 +592,10 @@ func (s *Pages) OrderCancel(w http.ResponseWriter, r *http.Request) {
 	goTo(w, r, "/orders/"+id)
 }
 
-// Клиент может только отменить заказ. Сотрудник ведёт его по шагам
-// и тоже может отменить, но не раньше и не позже: готовый к выдаче уже не трогаем.
-func nextStatuses(current string) []string {
-	switch current {
-	case "Принят":
-		return []string{"Принят", "В работе", "Отменён"}
-	case "В работе":
-		return []string{"В работе", "Собран", "Отменён"}
-	case "Собран":
-		return []string{"Собран", "Готов к выдаче", "Отменён"}
-	default:
-		return []string{current}
-	}
-}
-
-func statusStep(from, to string) bool {
-	for _, item := range nextStatuses(from) {
-		if item == to {
+func statusOk(s string) bool {
+	list := []string{"Принят", "В работе", "Собран", "Готов к выдаче", "Отменён"}
+	for _, item := range list {
+		if item == s {
 			return true
 		}
 	}

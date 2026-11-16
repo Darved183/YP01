@@ -7,6 +7,7 @@
       {{range .Options}}<option value="{{.}}"></option>{{end}}
     </datalist>
   {{end}}
+  {{if .Product.Article}}<p class="wide sku">Артикул {{.Product.Article}}</p>{{end}}
   <label class="wide">Название<input name="name" required maxlength="120" value="{{.Product.Name}}"></label>
   <label>Тип<input name="type" list="list-type" required value="{{.Product.Type}}"></label>
   <label>Пол
@@ -48,7 +49,7 @@
     <button class="btn" type="submit">{{if .Editing}}Сохранить{{else}}Добавить товар{{end}}</button>
     {{if .Editing}}
       <button class="btn danger" type="submit" formaction="/admin/products/delete" onclick="return confirm('Удалить товар?')">Удалить</button>
-      <a class="btn ghost" href="/item/{{.Product.ID}}">На витрине</a>
+      <a class="btn ghost" href="/item/{{.Product.Article}}">На витрине</a>
     {{end}}
   </div>
 </form>

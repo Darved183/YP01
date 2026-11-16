@@ -4,10 +4,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f3f0ea">
+  <meta name="theme-color" content="#f4f6f8">
   <title>{{.Title}} — KeptShop</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%231c1b19' width='32' height='32'/%3E%3Ctext x='16' y='21' text-anchor='middle' fill='%23f3f0ea' font-size='14' font-family='Georgia'%3EF%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect rx='8' fill='%2312141a' width='32' height='32'/%3E%3Ctext x='16' y='21' text-anchor='middle' fill='%23ffffff' font-size='15' font-family='Segoe UI,sans-serif' font-weight='700'%3EK%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/app.css?v=6">
 </head>
 <body>
 <div class="shell">
@@ -30,7 +30,6 @@
         {{if eq .Key "admin"}}
           <a href="/admin/products"{{if .NavProducts}} aria-current="page"{{end}}>Товары</a>
           <a href="/admin/users"{{if .NavUsers}} aria-current="page"{{end}}>Пользователи</a>
-          <a href="/admin/roles"{{if .NavRoles}} aria-current="page"{{end}}>Роли</a>
         {{end}}
       </nav>
       {{if .User}}
@@ -65,14 +64,4 @@
 {{if .Flash}}<div class="toast" role="status">{{.Flash}}</div>{{end}}
 </body>
 </html>
-{{end}}
-
-{{define "pager"}}
-{{if gt .Pages 1}}
-<nav class="pager" aria-label="Страницы">
-  {{if gt .Page 1}}<a href="{{.PagePath}}?page={{.PrevPage}}{{if .Keep.Sort}}&amp;sort={{.Keep.Sort}}{{end}}{{if .Keep.Type}}&amp;type={{.Keep.Type}}{{end}}{{if .Keep.Gender}}&amp;gender={{.Keep.Gender}}{{end}}{{if .Keep.Size}}&amp;size={{.Keep.Size}}{{end}}{{if .Keep.Color}}&amp;color={{.Keep.Color}}{{end}}{{if .Keep.Brand}}&amp;brand={{.Keep.Brand}}{{end}}{{if .Keep.Season}}&amp;season={{.Keep.Season}}{{end}}{{if .Keep.Role}}&amp;role={{.Keep.Role}}{{end}}{{if .Keep.Status}}&amp;status={{.Keep.Status}}{{end}}{{if .Keep.From}}&amp;from={{.Keep.From}}{{end}}{{if .Keep.To}}&amp;to={{.Keep.To}}{{end}}">Назад</a>{{else}}<span class="off">Назад</span>{{end}}
-  <span>{{.Page}} / {{.Pages}}</span>
-  {{if lt .Page .Pages}}<a href="{{.PagePath}}?page={{.NextPage}}{{if .Keep.Sort}}&amp;sort={{.Keep.Sort}}{{end}}{{if .Keep.Type}}&amp;type={{.Keep.Type}}{{end}}{{if .Keep.Gender}}&amp;gender={{.Keep.Gender}}{{end}}{{if .Keep.Size}}&amp;size={{.Keep.Size}}{{end}}{{if .Keep.Color}}&amp;color={{.Keep.Color}}{{end}}{{if .Keep.Brand}}&amp;brand={{.Keep.Brand}}{{end}}{{if .Keep.Season}}&amp;season={{.Keep.Season}}{{end}}{{if .Keep.Role}}&amp;role={{.Keep.Role}}{{end}}{{if .Keep.Status}}&amp;status={{.Keep.Status}}{{end}}{{if .Keep.From}}&amp;from={{.Keep.From}}{{end}}{{if .Keep.To}}&amp;to={{.Keep.To}}{{end}}">Дальше</a>{{else}}<span class="off">Дальше</span>{{end}}
-</nav>
-{{end}}
 {{end}}

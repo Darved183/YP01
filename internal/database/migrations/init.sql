@@ -1,8 +1,9 @@
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS roles (
-    id   TEXT PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE
+    id     TEXT PRIMARY KEY,
+    name   TEXT NOT NULL UNIQUE,
+    rights TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -17,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS products (
     id          TEXT PRIMARY KEY,
+    article     TEXT NOT NULL DEFAULT '',
     name        TEXT NOT NULL,
     type        TEXT NOT NULL,
     gender      TEXT NOT NULL,
@@ -44,6 +46,7 @@ CREATE TABLE IF NOT EXISTS cart (
 
 CREATE TABLE IF NOT EXISTS orders (
     id        TEXT PRIMARY KEY,
+    number    INTEGER NOT NULL DEFAULT 0,
     user_id   TEXT NOT NULL REFERENCES users(id),
     date_time TEXT NOT NULL,
     status    TEXT NOT NULL,
@@ -51,10 +54,14 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 CREATE TABLE IF NOT EXISTS order_items (
-    id         TEXT PRIMARY KEY,
-    order_id   TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    product_id TEXT NOT NULL REFERENCES products(id),
-    price      REAL NOT NULL
+    id          TEXT PRIMARY KEY,
+    order_id    TEXT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    product_id  TEXT NOT NULL REFERENCES products(id),
+    price       REAL NOT NULL,
+    name        TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    article     TEXT NOT NULL DEFAULT '',
+    spec        TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_type   ON products(type);
