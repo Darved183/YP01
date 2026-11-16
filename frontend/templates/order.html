@@ -6,8 +6,8 @@
     {{if .Staff}}<p>Клиент: {{.Buyer}}</p>{{end}}
     <div>
       {{if and .Staff (gt (len .Statuses) 1)}}
-        <form method="post" action="/orders/{{.Order.Number}}/status">
-          <input type="hidden" name="back" value="/orders/{{.Order.Number}}">
+        <form method="post" action="/orders/{{.OrderRef}}/status">
+          <input type="hidden" name="back" value="/orders/{{.OrderRef}}">
           <select name="status" aria-label="Статус заказа" onchange="this.form.submit()">
             {{$st := .Order.Status}}
             {{range .Statuses}}
@@ -62,7 +62,7 @@
   <p class="total">{{.Sum}}</p>
   <p class="muted small">Цена зафиксирована на момент покупки.</p>
   {{if .CanCancel}}
-    <form class="panel stack" method="post" action="/orders/{{.Order.Number}}/cancel">
+    <form class="panel stack" method="post" action="/orders/{{.OrderRef}}/cancel">
       <label>Комментарий<textarea name="comment" required maxlength="500" placeholder="Почему отменяете заказ"></textarea></label>
       <button class="btn danger" type="submit">Отменить заказ</button>
     </form>

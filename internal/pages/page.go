@@ -49,6 +49,7 @@ type page struct {
 	Buyer     string
 	When      string
 	Order     *models.Order
+	OrderRef  string
 	Comment   string
 	CanCancel bool
 	Users     []userRow
@@ -79,9 +80,9 @@ type cartLine struct {
 }
 
 type orderRow struct {
-	ID, When, Buyer, Sum, Status string
-	Number                       int
-	Next                         []string
+	ID, When, Buyer, Sum, Status, Ref string
+	Number                             int
+	Next                               []string
 }
 
 type itemGroup struct {

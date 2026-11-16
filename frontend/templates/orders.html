@@ -45,7 +45,7 @@
               <td class="nowrap">{{.Sum}}</td>
               <td>
                 {{if and $.Staff (gt (len .Next) 1)}}
-                  <form method="post" action="/orders/{{.Number}}/status">
+                  <form method="post" action="/orders/{{.Ref}}/status">
                     <input type="hidden" name="back" value="/orders">
                     <select name="status" aria-label="Статус заказа" onchange="this.form.submit()">
                       {{$st := .Status}}
@@ -58,7 +58,7 @@
                   <span class="status" data-status="{{.Status}}">{{.Status}}</span>
                 {{end}}
               </td>
-              <td class="nowrap"><a href="/orders/{{.Number}}">Открыть</a></td>
+              <td class="nowrap"><a href="/orders/{{.Ref}}">Открыть</a></td>
             </tr>
           {{end}}
         </tbody>
