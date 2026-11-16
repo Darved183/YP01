@@ -85,7 +85,7 @@ func (s *Pages) CartAdd(w http.ResponseWriter, r *http.Request) {
 	if count < 1 {
 		count = 1
 	}
-	left := s.unreserved(productID)
+	left := s.freeFor(productID, p.User.ID)
 	if left < 1 {
 		setFlash(w, "Этого товара нет в наличии")
 		goTo(w, r, back)
@@ -145,7 +145,7 @@ func (s *Pages) CartCount(w http.ResponseWriter, r *http.Request) {
 			_ = s.Repo.PutCart(line)
 		}
 	} else {
-		if s.unreserved(line.ProductID) < 1 {
+		if s.freeFor(line.ProductID, p.User.ID) < 1 {
 			setFlash(w, "Больше нет на складе")
 		} else {
 			line.Count++
@@ -292,16 +292,20 @@ func (s *Pages) Checkout(w http.ResponseWriter, r *http.Request) {
 	goTo(w, r, "/orders/"+strconv.Itoa(orderNo))
 }
 
-func (s *Pages) unreserved(productID string) int {
+// Сколько ещё этот клиент может положить в корзину. Чужие корзины склад не занимают:
+// число на карточке уменьшается только когда заказ уже оформлен.
+func (s *Pages) freeFor(productID, userID string) int {
 	item, err := s.Repo.GetProductByID(productID)
 	if err != nil || item.Stock < 1 {
 		return 0
 	}
-	var held int
-	if err = s.Repo.DB.Get(&held, `SELECT COALESCE(SUM(count),0) FROM cart WHERE product_id = ?`, productID); err != nil {
-		return 0
+	var mine int
+	if userID != "" {
+		if err = s.Repo.DB.Get(&mine, `SELECT COALESCE(SUM(count),0) FROM cart WHERE product_id = ? AND user_id = ?`, productID, userID); err != nil {
+			return 0
+		}
 	}
-	left := item.Stock - held
+	left := item.Stock - mine
 	if left < 0 {
 		return 0
 	}
@@ -361,7 +365,7 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 			When: formatDate(order.DateTime), Status: order.Status, Sum: money(s.orderSum(order.ID)),
 		}
 		if p.Staff {
-			row.Next = staffStatuses(order.Status)
+			row.Next = staffStatuses()
 			if buyer, err := s.Repo.GetUser(order.UserID); err == nil {
 				row.Buyer = buyer.Name
 			} else {
@@ -454,9 +458,9 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 	p.Comment = order.Comment
 	p.CanCancel = !p.Staff && order.Status != "Отменён" && order.Status != "Готов к выдаче"
 	p.When = formatDate(order.DateTime)
-	if p.Staff && order.Status != "Отменён" {
+	if p.Staff {
 		p.Hint = "Здесь можно сменить статус."
-		p.Statuses = staffStatuses(order.Status)
+		p.Statuses = staffStatuses()
 	}
 	if buyer, err := s.Repo.GetUser(order.UserID); err == nil {
 		p.Buyer = buyer.Name
@@ -524,20 +528,27 @@ func (s *Pages) OrderStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	ref := orderRef(order.Number, order.ID)
 	status := r.FormValue("status")
-	if order.Status == "Отменён" {
-		setFlash(w, "Отменённый заказ менять нельзя")
-		goTo(w, r, "/orders/"+ref)
-		return
-	}
 	if !statusOk(status) {
 		setFlash(w, "Неизвестный статус")
 		goTo(w, r, "/orders/"+ref)
 		return
 	}
 	prev := order.Status
-	if status == "Отменён" && prev != "Отменён" {
+	if status == prev {
+		goTo(w, r, "/orders/"+ref)
+		return
+	}
+	if status == "Отменён" {
 		if err = s.Repo.ReturnOrderStock(order.ID); err != nil {
 			setFlash(w, "Не получилось вернуть товар на склад")
+			goTo(w, r, "/orders/"+ref)
+			return
+		}
+	}
+	if prev == "Отменён" {
+		ok, err := s.Repo.TakeOrderStock(order.ID)
+		if err != nil || !ok {
+			setFlash(w, "На складе уже не хватает товара, статус не изменён")
 			goTo(w, r, "/orders/"+ref)
 			return
 		}
@@ -613,10 +624,7 @@ func orderRef(number int, id string) string {
 	return id
 }
 
-func staffStatuses(current string) []string {
-	if current == "Отменён" {
-		return nil
-	}
+func staffStatuses() []string {
 	return []string{"Принят", "В работе", "Собран", "Готов к выдаче", "Отменён"}
 }
 

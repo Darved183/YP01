@@ -8,7 +8,7 @@
       {{if and .Staff (gt (len .Statuses) 1)}}
         <form method="post" action="/orders/{{.OrderRef}}/status">
           <input type="hidden" name="back" value="/orders/{{.OrderRef}}">
-          <select name="status" aria-label="Статус заказа" onchange="this.form.submit()">
+          <select name="status" aria-label="Статус заказа" data-prev="{{.Order.Status}}" onfocus="this.dataset.prev=this.value" onchange="if(!confirm('Сменить статус заказа?')){this.value=this.dataset.prev;return}this.form.requestSubmit()">
             {{$st := .Order.Status}}
             {{range .Statuses}}
               <option value="{{.}}"{{if eq . $st}} selected{{end}}>{{.}}</option>

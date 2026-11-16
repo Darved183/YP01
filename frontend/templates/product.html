@@ -43,7 +43,7 @@
   <div class="stack">
     <p class="price large">{{money .Product.Price}}</p>
     {{if .Product.Description}}<p>{{.Product.Description}}</p>{{end}}
-    <p class="muted">В наличии: {{.Available}} шт.</p>
+    <p class="muted">В наличии: {{.Product.Stock}} шт.</p>
     <dl class="specs">
       <div><dt>Артикул</dt><dd>{{.Product.Article}}</dd></div>
       <div><dt>Тип</dt><dd>{{.Product.Type}}</dd></div>

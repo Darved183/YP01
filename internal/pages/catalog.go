@@ -76,6 +76,11 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, item := range products {
 		c := s.cardOf(item)
+		userID := ""
+		if p.User != nil {
+			userID = p.User.ID
+		}
+		c.Left = s.freeFor(item.ID, userID)
 		if line, ok := inCart[item.ID]; ok {
 			c.InCart = line.Count
 			c.CartID = line.ID
@@ -94,7 +99,7 @@ func (s *Pages) cardOf(item models.Product) card {
 	c := card{
 		ID: item.ID, Article: item.Article, Name: item.Name, Type: item.Type, Gender: item.Gender,
 		Size: item.Size, Price: money(item.Price), Brand: item.Brand, Color: item.Color,
-		Stock: item.Stock, Left: s.unreserved(item.ID),
+		Stock: item.Stock, Left: item.Stock,
 	}
 	photos, err := s.Repo.PhotosByProduct(item.ID)
 	if err != nil {
@@ -121,7 +126,11 @@ func (s *Pages) Product(w http.ResponseWriter, r *http.Request) {
 	}
 	p.Title = item.Name
 	p.Product = item
-	p.Available = s.unreserved(item.ID)
+	userID := ""
+	if p.User != nil {
+		userID = p.User.ID
+	}
+	p.Available = s.freeFor(item.ID, userID)
 	if p.Key == "client" && p.User != nil {
 		lines, err := s.Repo.GetCartByUser(p.User.ID)
 		if err == nil {
