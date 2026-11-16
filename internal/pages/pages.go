@@ -81,6 +81,7 @@ func (s *Pages) render(w http.ResponseWriter, name string, p page) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 	if err := t.ExecuteTemplate(w, "layout", p); err != nil {
 		slog.Error("template", "page", name, "error", err)
 	}

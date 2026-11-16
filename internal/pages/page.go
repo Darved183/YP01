@@ -54,6 +54,7 @@ type page struct {
 	OrderRef  string
 	Comment   string
 	CanCancel bool
+	Live      bool
 	Users     []userRow
 	Roles     []roleRow
 	RoleID    string

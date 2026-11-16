@@ -250,7 +250,8 @@ label.check {
   color: var(--ink);
   line-height: 1.4;
 }
-label.check input { width: 1.05rem; height: 1.05rem; margin-top: .2rem; accent-color: var(--ink); }
+label.check input { width: 1.05rem; height: 1.05rem; margin-top: .2rem; flex: 0 0 auto; accent-color: var(--ink); }
+label.check span { min-width: 0; }
 label.check a { color: inherit; text-decoration: underline; }
 .prose { max-width: 40rem; }
 .prose h2 { margin-top: .4rem; }

@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#f4f6f8">
   <title>{{.Title}} — KeptShop</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect rx='8' fill='%2312141a' width='32' height='32'/%3E%3Ctext x='16' y='21' text-anchor='middle' fill='%23ffffff' font-size='15' font-family='Segoe UI,sans-serif' font-weight='700'%3EK%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/app.css?v=8">
+  <link rel="stylesheet" href="/static/app.css?v=9">
 </head>
 <body>
 <div class="shell">
@@ -62,6 +62,35 @@
   </footer>
 </div>
 {{if .Flash}}<div class="toast" role="status">{{.Flash}}</div>{{end}}
+{{if .Live}}
+<script>
+  // Заказ могли сменить в другой вкладке: подтягиваем страницу ещё раз.
+  function shopBusy() {
+    var el = document.activeElement;
+    if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) return true;
+    var box = document.querySelector("textarea");
+    return !!(box && box.value.trim());
+  }
+  function shopPull() {
+    if (shopBusy()) return;
+    fetch(location.pathname + location.search, {cache: "no-store", credentials: "same-origin"})
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        var next = new DOMParser().parseFromString(html, "text/html").querySelector("main");
+        var cur = document.querySelector("main");
+        if (!next || !cur || next.innerHTML === cur.innerHTML) return;
+        var y = window.scrollY;
+        cur.innerHTML = next.innerHTML;
+        window.scrollTo(0, y);
+      })
+      .catch(function () {});
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") shopPull();
+  });
+  setInterval(shopPull, 4000);
+</script>
+{{end}}
 </body>
 </html>
 {{end}}

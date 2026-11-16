@@ -439,6 +439,9 @@ func (s *Pages) AdminUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, role := range roles {
+		if skipRole(role.Name, role.ID, p.RoleID) {
+			continue
+		}
 		p.Roles = append(p.Roles, roleRow{ID: role.ID, Name: role.Name, Selected: role.ID == p.RoleID})
 	}
 	f := database.UserFilter{Page: 1, RoleID: p.RoleID}
@@ -496,7 +499,7 @@ func (s *Pages) UserForm(w http.ResponseWriter, r *http.Request) {
 		p.When = formatDate(user.RegistrationDate)
 	} else {
 		p.Title = "Новый пользователь"
-		p.Hint = "Администратор назначает любую роль."
+		p.Hint = "Гость — это посетитель без регистрации, такую роль аккаунту не дают."
 	}
 	roles, err := s.Repo.GetRoles()
 	if err != nil {
@@ -504,7 +507,14 @@ func (s *Pages) UserForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, role := range roles {
-		p.Roles = append(p.Roles, roleRow{ID: role.ID, Name: role.Name, Selected: role.ID == user.RoleID})
+		if skipRole(role.Name, role.ID, user.RoleID) {
+			continue
+		}
+		chosen := role.ID == user.RoleID
+		if user.RoleID == "" && roleKey(role.Name) == "client" {
+			chosen = true
+		}
+		p.Roles = append(p.Roles, roleRow{ID: role.ID, Name: role.Name, Selected: chosen})
 	}
 	p.Email = user.Email
 	p.Buyer = user.Phone
@@ -545,8 +555,11 @@ func (s *Pages) UserSave(w http.ResponseWriter, r *http.Request) {
 		msg = "Пароль должен быть не короче 4 символов"
 	}
 	if msg == "" {
-		if _, err := s.Repo.GetRole(roleID); err != nil {
+		role, err := s.Repo.GetRole(roleID)
+		if err != nil {
 			msg = "Роль не найдена"
+		} else if skipRole(role.Name, role.ID, "") {
+			msg = "Гостю роль не назначают: это посетитель без аккаунта"
 		}
 	}
 	if msg == "" {

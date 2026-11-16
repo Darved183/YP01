@@ -329,6 +329,7 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 	p.From = q.Get("from")
 	p.To = q.Get("to")
 	p.Statuses = []string{"Принят", "В работе", "Собран", "Готов к выдаче", "Отменён"}
+	p.Live = true
 	if p.From != "" && p.To != "" && p.From > p.To {
 		p.Error = "Дата «с» позже даты «по»."
 		s.render(w, "orders", p)
@@ -498,6 +499,7 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 		p.Groups[i].Sum = money(price * float64(itemsSame))
 	}
 	p.Sum = money(sum)
+	p.Live = true
 	s.render(w, "order", p)
 }
 
