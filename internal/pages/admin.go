@@ -87,8 +87,7 @@ func (s *Pages) ProductForm(w http.ResponseWriter, r *http.Request) {
 
 func (s *Pages) fillProductForm(p *page) error {
 	labels := []struct{ key, label string }{
-		{"type", "Тип"}, {"gender", "Пол"}, {"size", "Размер"},
-		{"color", "Цвет"}, {"brand", "Бренд"}, {"season", "Сезон"},
+		{"type", "Тип"}, {"color", "Цвет"}, {"brand", "Бренд"},
 	}
 	for _, item := range labels {
 		values, err := s.Repo.ProductField(item.key)
@@ -103,7 +102,10 @@ func (s *Pages) fillProductForm(p *page) error {
 			return err
 		}
 		for _, photo := range photos {
-			p.Photos = append(p.Photos, photoCard{ID: photo.ID, Filename: photo.Filename, HasFile: fileExists(photo.Filename)})
+			if !fileExists(photo.Filename) {
+				continue
+			}
+			p.Photos = append(p.Photos, photoCard{ID: photo.ID, Filename: photo.Filename, HasFile: true})
 		}
 	}
 	return nil
@@ -174,9 +176,24 @@ func readProduct(r *http.Request) (models.Product, string) {
 	if p.Name == "" || p.Type == "" || p.Gender == "" || p.Size == "" || p.Color == "" || p.Brand == "" || p.Season == "" {
 		return p, "Заполните все поля товара"
 	}
+	switch p.Gender {
+	case "женский", "мужской", "унисекс":
+	default:
+		return p, "Пол: женский, мужской или унисекс"
+	}
+	switch p.Size {
+	case "XS", "S", "M", "L", "XL":
+	default:
+		return p, "Размер: XS, S, M, L или XL"
+	}
+	switch p.Season {
+	case "лето", "зима", "демисезон", "всесезон":
+	default:
+		return p, "Сезон: лето, зима, демисезон или всесезон"
+	}
 	price, ok := parsePrice(r.FormValue("price"))
-	if !ok {
-		return p, "Укажите корректную цену"
+	if !ok || price <= 0 {
+		return p, "Укажите цену больше нуля"
 	}
 	p.Price = price
 	stock, err := strconv.Atoi(strings.TrimSpace(r.FormValue("stock")))
@@ -438,6 +455,9 @@ func (s *Pages) UserForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, role := range roles {
+		if skipRole(role.Name, role.ID, user.RoleID) {
+			continue
+		}
 		p.Roles = append(p.Roles, roleRow{ID: role.ID, Name: role.Name, Selected: role.ID == user.RoleID})
 	}
 	p.Email = user.Email
@@ -445,6 +465,37 @@ func (s *Pages) UserForm(w http.ResponseWriter, r *http.Request) {
 	p.Text = user.Name
 	p.RoleID = user.RoleID
 	p.Next = user.ID
+	s.render(w, "user_form", p)
+}
+
+func (s *Pages) showUserForm(w http.ResponseWriter, p page, id, name, email, phone, roleID, msg string) {
+	p.Error = msg
+	p.Text = name
+	p.Email = email
+	p.Buyer = phone
+	p.RoleID = roleID
+	p.Next = id
+	if id != "" {
+		p.Editing = true
+		p.Title = "Правка пользователя"
+		if user, err := s.Repo.GetUser(id); err == nil {
+			p.When = formatDate(user.RegistrationDate)
+		}
+	} else {
+		p.Title = "Новый пользователь"
+		p.Hint = "Администратор назначает любую роль."
+	}
+	roles, err := s.Repo.GetRoles()
+	if err != nil {
+		s.fail(w, p, "Ошибка", "Не получилось открыть форму", err)
+		return
+	}
+	for _, role := range roles {
+		if skipRole(role.Name, role.ID, roleID) {
+			continue
+		}
+		p.Roles = append(p.Roles, roleRow{ID: role.ID, Name: role.Name, Selected: role.ID == roleID})
+	}
 	s.render(w, "user_form", p)
 }
 
@@ -470,15 +521,26 @@ func (s *Pages) UserSave(w http.ResponseWriter, r *http.Request) {
 	if name == "" || email == "" || phone == "" || roleID == "" {
 		msg = "Заполните данные пользователя и роль"
 	} else if !validEmail(email) {
-		msg = "Некорректная почта"
+		msg = "Почта должна быть вида имя@почта.ru"
+	} else if !validPhone(phone) {
+		msg = "Телефон укажите в формате +7 900 000-00-00"
 	} else if id == "" && len(pass) < 4 {
 		msg = "Пароль должен быть не короче 4 символов"
 	} else if pass != "" && len(pass) < 4 {
 		msg = "Пароль должен быть не короче 4 символов"
 	}
 	if msg == "" {
-		if _, err := s.Repo.GetRole(roleID); err != nil {
+		role, err := s.Repo.GetRole(roleID)
+		kept := ""
+		if id != "" {
+			if current, err := s.Repo.GetUser(id); err == nil {
+				kept = current.RoleID
+			}
+		}
+		if err != nil {
 			msg = "Роль не найдена"
+		} else if skipRole(role.Name, role.ID, kept) {
+			msg = "Роль «Гость» не назначают учётной записи"
 		}
 	}
 	if msg == "" {
@@ -497,12 +559,7 @@ func (s *Pages) UserSave(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if msg != "" {
-		setFlash(w, msg)
-		if id == "" {
-			goTo(w, r, "/admin/users/new")
-		} else {
-			goTo(w, r, "/admin/users/"+id)
-		}
+		s.showUserForm(w, p, id, name, email, phone, roleID, msg)
 		return
 	}
 	if id == "" {
@@ -581,7 +638,7 @@ func (s *Pages) AdminRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.Title = "Роли"
-	p.Hint = "Системные роли нельзя удалить."
+	p.Hint = "Гость, клиент, менеджер и администратор уже есть. Свою роль можно добавить."
 	roles, err := s.Repo.GetRoles()
 	if err != nil {
 		s.fail(w, p, "Ошибка", "Не получилось прочитать роли", err)
@@ -639,6 +696,11 @@ func (s *Pages) RoleSave(w http.ResponseWriter, r *http.Request) {
 			goTo(w, r, "/admin/roles")
 			return
 		}
+		if systemRole(role.Name) {
+			setFlash(w, "Название этой роли менять нельзя")
+			goTo(w, r, "/admin/roles")
+			return
+		}
 		role.Name = name
 		err = s.Repo.PutRole(role)
 		if err == nil {
@@ -670,7 +732,7 @@ func (s *Pages) RoleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if systemRole(role.Name) {
-		setFlash(w, "Системную роль нельзя удалить. Создайте свою и удалите её.")
+		setFlash(w, "Эту роль нельзя удалить")
 		goTo(w, r, "/admin/roles")
 		return
 	}

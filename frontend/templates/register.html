@@ -6,7 +6,7 @@
     <input type="hidden" name="next" value="{{.Next}}">
     <label>Имя<input name="name" required maxlength="80" autocomplete="name" value="{{.Text}}"></label>
     <label>Почта<input name="email" type="email" required autocomplete="email" value="{{.Email}}"></label>
-    <label>Телефон<input name="phone" required minlength="5" maxlength="30" placeholder="+7 900 000-00-00" autocomplete="tel" value="{{.Buyer}}"></label>
+    <label>Телефон<input name="phone" required maxlength="18" inputmode="tel" placeholder="+7 900 000-00-00" autocomplete="tel" pattern="(\+7|8)[0-9 \-\(\)]{10,16}" title="Формат +7 900 000-00-00" value="{{.Buyer}}"></label>
     <label>Пароль<input name="password" type="password" required minlength="4" autocomplete="new-password"></label>
     <label class="check"><input type="checkbox" name="policy" required> Согласен с политикой конфиденциальности и обработкой персональных данных</label>
     <button class="btn" type="submit">Создать аккаунт</button>

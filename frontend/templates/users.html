@@ -27,7 +27,7 @@
                 <a href="/admin/users/{{.ID}}">Править</a>
                 <form method="post" action="/admin/users/delete" style="display:inline">
                   <input type="hidden" name="id" value="{{.ID}}">
-                  <button class="btn ghost small" type="submit">Удалить</button>
+                  <button class="btn ghost small" type="submit" onclick="return confirm('Удалить пользователя?')">Удалить</button>
                 </form>
               </td>
             </tr>

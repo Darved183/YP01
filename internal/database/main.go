@@ -87,6 +87,14 @@ func Load() (*sqlx.DB, error) {
 		db.Close()
 		return nil, err
 	}
+	if err = ensureRoleNames(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err = ensureSeasons(db); err != nil {
+		db.Close()
+		return nil, err
+	}
 
 	return db, nil
 }

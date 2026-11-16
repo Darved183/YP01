@@ -63,9 +63,9 @@ func (s *Pages) RegisterPost(w http.ResponseWriter, r *http.Request) {
 	if name == "" || email == "" || phone == "" {
 		msg = "Заполните имя, почту и телефон"
 	} else if !validEmail(email) {
-		msg = "Некорректная почта"
-	} else if len(phone) < 5 {
-		msg = "Укажите телефон"
+		msg = "Почта должна быть вида имя@почта.ru"
+	} else if !validPhone(phone) {
+		msg = "Телефон укажите в формате +7 900 000-00-00"
 	} else if len(pass) < 4 {
 		msg = "Пароль должен быть не короче 4 символов"
 	}

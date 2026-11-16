@@ -9,11 +9,32 @@
   {{end}}
   <label class="wide">Название<input name="name" required maxlength="120" value="{{.Product.Name}}"></label>
   <label>Тип<input name="type" list="list-type" required value="{{.Product.Type}}"></label>
-  <label>Пол<input name="gender" list="list-gender" required value="{{.Product.Gender}}"></label>
-  <label>Размер<input name="size" list="list-size" required value="{{.Product.Size}}"></label>
+  <label>Пол
+    <select name="gender" required>
+      <option value="женский"{{if eq .Product.Gender "женский"}} selected{{end}}>женский</option>
+      <option value="мужской"{{if eq .Product.Gender "мужской"}} selected{{end}}>мужской</option>
+      <option value="унисекс"{{if eq .Product.Gender "унисекс"}} selected{{end}}>унисекс</option>
+    </select>
+  </label>
+  <label>Размер
+    <select name="size" required>
+      <option value="XS"{{if eq .Product.Size "XS"}} selected{{end}}>XS</option>
+      <option value="S"{{if eq .Product.Size "S"}} selected{{end}}>S</option>
+      <option value="M"{{if eq .Product.Size "M"}} selected{{end}}>M</option>
+      <option value="L"{{if eq .Product.Size "L"}} selected{{end}}>L</option>
+      <option value="XL"{{if eq .Product.Size "XL"}} selected{{end}}>XL</option>
+    </select>
+  </label>
   <label>Цвет<input name="color" list="list-color" required value="{{.Product.Color}}"></label>
   <label>Бренд<input name="brand" list="list-brand" required value="{{.Product.Brand}}"></label>
-  <label>Сезон<input name="season" list="list-season" required value="{{.Product.Season}}"></label>
+  <label>Сезон
+    <select name="season" required>
+      <option value="лето"{{if eq .Product.Season "лето"}} selected{{end}}>лето</option>
+      <option value="демисезон"{{if eq .Product.Season "демисезон"}} selected{{end}}>демисезон</option>
+      <option value="зима"{{if eq .Product.Season "зима"}} selected{{end}}>зима</option>
+      <option value="всесезон"{{if eq .Product.Season "всесезон"}} selected{{end}}>всесезон</option>
+    </select>
+  </label>
   <label>Цена<input name="price" type="number" min="0" step="0.01" required value="{{.Product.Price}}"></label>
   <label>На складе<input name="stock" type="number" min="0" step="1" required {{if .Editing}}value="{{.Product.Stock}}"{{end}}></label>
   <label class="wide">Описание<textarea name="description" maxlength="1000">{{.Product.Description}}</textarea></label>
@@ -26,7 +47,7 @@
   <div class="wide row">
     <button class="btn" type="submit">{{if .Editing}}Сохранить{{else}}Добавить товар{{end}}</button>
     {{if .Editing}}
-      <button class="btn danger" type="submit" formaction="/admin/products/delete">Удалить</button>
+      <button class="btn danger" type="submit" formaction="/admin/products/delete" onclick="return confirm('Удалить товар?')">Удалить</button>
       <a class="btn ghost" href="/item/{{.Product.ID}}">На витрине</a>
     {{end}}
   </div>
@@ -38,14 +59,10 @@
       <ul class="plain">
         {{range .Photos}}
           <li>
-            {{if .HasFile}}
-              <a href="/picture/{{.ID}}"><img class="thumb" src="/photo/{{.ID}}" alt=""></a>
-            {{else}}
-              <span class="muted small">Файл не загружен</span>
-            {{end}}
+            <img class="thumb" src="/photo/{{.ID}}" alt="">
             <form method="post" action="/admin/photos/delete">
               <input type="hidden" name="id" value="{{.ID}}">
-              <button class="btn ghost small" type="submit">Удалить</button>
+              <button class="btn ghost small" type="submit" onclick="return confirm('Удалить фотографию?')">Удалить</button>
             </form>
           </li>
         {{end}}

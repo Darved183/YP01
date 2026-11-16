@@ -1,4 +1,5 @@
 {{define "content"}}
+{{if .Staff}}
 <form class="panel" method="get" action="/orders" style="margin-bottom:1rem">
   <div class="form-grid">
     <label>Статус
@@ -18,6 +19,7 @@
     </div>
   </div>
 </form>
+{{end}}
 {{if .Error}}<div class="panel"><p class="form-error">{{.Error}}</p></div>{{end}}
 {{if not .Error}}
   <p class="muted small">{{.RangeText}}</p>
@@ -40,12 +42,12 @@
               {{if $.Staff}}<td>{{.Buyer}}</td>{{end}}
               <td class="nowrap">{{.Sum}}</td>
               <td>
-                {{if $.Staff}}
+                {{if and $.Staff (gt (len .Next) 1)}}
                   <form method="post" action="/orders/{{.ID}}/status">
                     <input type="hidden" name="back" value="/orders">
                     <select name="status" aria-label="Статус заказа" onchange="this.form.submit()">
                       {{$st := .Status}}
-                      {{range $.Statuses}}
+                      {{range .Next}}
                         <option value="{{.}}"{{if eq . $st}} selected{{end}}>{{.}}</option>
                       {{end}}
                     </select>

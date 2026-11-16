@@ -271,7 +271,7 @@ textarea { min-height: 7.5rem; resize: vertical; }
 
 .pager { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; }
 .pager a { text-decoration: none; border-bottom: 1px solid var(--ink); }
-.pager a[aria-disabled="true"] { opacity: .35; pointer-events: none; border-bottom-color: transparent; }
+.pager a[aria-disabled="true"], .pager .off { opacity: .35; }
 
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }

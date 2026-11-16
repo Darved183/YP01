@@ -42,7 +42,7 @@
           <form method="post" action="/logout"><button type="submit" class="btn ghost small">Выйти</button></form>
         </div>
       {{else}}
-        <div class="userbox"><div><div class="who">Гость</div><div class="muted small">без входа</div></div></div>
+        <div class="userbox"><div><div class="who">Гость</div></div></div>
       {{end}}
     </div>
   </header>
@@ -68,9 +68,11 @@
 {{end}}
 
 {{define "pager"}}
+{{if gt .Pages 1}}
 <nav class="pager" aria-label="Страницы">
-  {{if gt .Page 1}}<a href="{{.PagePath}}?page={{.PrevPage}}{{if .Keep.Sort}}&amp;sort={{.Keep.Sort}}{{end}}{{if .Keep.Type}}&amp;type={{.Keep.Type}}{{end}}{{if .Keep.Gender}}&amp;gender={{.Keep.Gender}}{{end}}{{if .Keep.Size}}&amp;size={{.Keep.Size}}{{end}}{{if .Keep.Color}}&amp;color={{.Keep.Color}}{{end}}{{if .Keep.Brand}}&amp;brand={{.Keep.Brand}}{{end}}{{if .Keep.Season}}&amp;season={{.Keep.Season}}{{end}}{{if .Keep.Role}}&amp;role={{.Keep.Role}}{{end}}{{if .Keep.Status}}&amp;status={{.Keep.Status}}{{end}}{{if .Keep.From}}&amp;from={{.Keep.From}}{{end}}{{if .Keep.To}}&amp;to={{.Keep.To}}{{end}}">Назад</a>{{else}}<a href="#" aria-disabled="true">Назад</a>{{end}}
+  {{if gt .Page 1}}<a href="{{.PagePath}}?page={{.PrevPage}}{{if .Keep.Sort}}&amp;sort={{.Keep.Sort}}{{end}}{{if .Keep.Type}}&amp;type={{.Keep.Type}}{{end}}{{if .Keep.Gender}}&amp;gender={{.Keep.Gender}}{{end}}{{if .Keep.Size}}&amp;size={{.Keep.Size}}{{end}}{{if .Keep.Color}}&amp;color={{.Keep.Color}}{{end}}{{if .Keep.Brand}}&amp;brand={{.Keep.Brand}}{{end}}{{if .Keep.Season}}&amp;season={{.Keep.Season}}{{end}}{{if .Keep.Role}}&amp;role={{.Keep.Role}}{{end}}{{if .Keep.Status}}&amp;status={{.Keep.Status}}{{end}}{{if .Keep.From}}&amp;from={{.Keep.From}}{{end}}{{if .Keep.To}}&amp;to={{.Keep.To}}{{end}}">Назад</a>{{else}}<span class="off">Назад</span>{{end}}
   <span>{{.Page}} / {{.Pages}}</span>
-  {{if lt .Page .Pages}}<a href="{{.PagePath}}?page={{.NextPage}}{{if .Keep.Sort}}&amp;sort={{.Keep.Sort}}{{end}}{{if .Keep.Type}}&amp;type={{.Keep.Type}}{{end}}{{if .Keep.Gender}}&amp;gender={{.Keep.Gender}}{{end}}{{if .Keep.Size}}&amp;size={{.Keep.Size}}{{end}}{{if .Keep.Color}}&amp;color={{.Keep.Color}}{{end}}{{if .Keep.Brand}}&amp;brand={{.Keep.Brand}}{{end}}{{if .Keep.Season}}&amp;season={{.Keep.Season}}{{end}}{{if .Keep.Role}}&amp;role={{.Keep.Role}}{{end}}{{if .Keep.Status}}&amp;status={{.Keep.Status}}{{end}}{{if .Keep.From}}&amp;from={{.Keep.From}}{{end}}{{if .Keep.To}}&amp;to={{.Keep.To}}{{end}}">Дальше</a>{{else}}<a href="#" aria-disabled="true">Дальше</a>{{end}}
+  {{if lt .Page .Pages}}<a href="{{.PagePath}}?page={{.NextPage}}{{if .Keep.Sort}}&amp;sort={{.Keep.Sort}}{{end}}{{if .Keep.Type}}&amp;type={{.Keep.Type}}{{end}}{{if .Keep.Gender}}&amp;gender={{.Keep.Gender}}{{end}}{{if .Keep.Size}}&amp;size={{.Keep.Size}}{{end}}{{if .Keep.Color}}&amp;color={{.Keep.Color}}{{end}}{{if .Keep.Brand}}&amp;brand={{.Keep.Brand}}{{end}}{{if .Keep.Season}}&amp;season={{.Keep.Season}}{{end}}{{if .Keep.Role}}&amp;role={{.Keep.Role}}{{end}}{{if .Keep.Status}}&amp;status={{.Keep.Status}}{{end}}{{if .Keep.From}}&amp;from={{.Keep.From}}{{end}}{{if .Keep.To}}&amp;to={{.Keep.To}}{{end}}">Дальше</a>{{else}}<span class="off">Дальше</span>{{end}}
 </nav>
+{{end}}
 {{end}}

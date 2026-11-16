@@ -7,17 +7,26 @@
   <ul class="plain">
     {{range .Roles}}
       <li class="block">
-        <form class="role-line" method="post" action="/admin/roles/save">
-          <input type="hidden" name="id" value="{{.ID}}">
-          <label>Название<input name="name" required maxlength="60" value="{{.Name}}"></label>
-          <div class="stack">
-            <span class="muted small">{{.Note}}</span>
-            <span class="row">
-              <button class="btn small" type="submit">Сохранить</button>
-              <button class="btn ghost small" type="submit" formaction="/admin/roles/delete">Удалить</button>
-            </span>
+        {{if .System}}
+          <div class="role-line">
+            <div>
+              <div>{{.Name}}</div>
+              <p class="muted small">{{.Note}}</p>
+            </div>
           </div>
-        </form>
+        {{else}}
+          <form class="role-line" method="post" action="/admin/roles/save">
+            <input type="hidden" name="id" value="{{.ID}}">
+            <label>Название<input name="name" required maxlength="60" value="{{.Name}}"></label>
+            <div class="stack">
+              <span class="muted small">{{.Note}}</span>
+              <span class="row">
+                <button class="btn small" type="submit">Сохранить</button>
+                <button class="btn ghost small" type="submit" formaction="/admin/roles/delete" onclick="return confirm('Удалить роль?')">Удалить</button>
+              </span>
+            </div>
+          </form>
+        {{end}}
       </li>
     {{end}}
   </ul>

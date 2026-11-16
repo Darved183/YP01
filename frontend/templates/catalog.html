@@ -15,7 +15,7 @@
     {{end}}
     <label>Цена
       <select name="sort" onchange="this.form.submit()">
-        <option value=""{{if eq $.Sort ""}} selected{{end}}>Как в каталоге</option>
+        <option value=""{{if eq $.Sort ""}} selected{{end}}>Обычный порядок</option>
         <option value="price-asc"{{if eq $.Sort "price-asc"}} selected{{end}}>Сначала дешевле</option>
         <option value="price-desc"{{if eq $.Sort "price-desc"}} selected{{end}}>Сначала дороже</option>
       </select>

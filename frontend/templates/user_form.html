@@ -1,9 +1,10 @@
 {{define "content"}}
 <form class="form-grid narrow" method="post" action="/admin/users/save">
+  {{if .Error}}<p class="form-error wide">{{.Error}}</p>{{end}}
   <input type="hidden" name="id" value="{{.Next}}">
   <label class="wide">Имя<input name="name" required maxlength="80" value="{{.Text}}"></label>
   <label class="wide">Почта<input name="email" type="email" required value="{{.Email}}"></label>
-  <label class="wide">Телефон<input name="phone" required minlength="5" maxlength="30" value="{{.Buyer}}"></label>
+  <label class="wide">Телефон<input name="phone" required maxlength="18" inputmode="tel" placeholder="+7 900 000-00-00" pattern="(\+7|8)[0-9 \-\(\)]{10,16}" title="Формат +7 900 000-00-00" value="{{.Buyer}}"></label>
   <label class="wide">Роль
     <select name="role_id" required>
       {{range .Roles}}
@@ -16,7 +17,7 @@
   <div class="wide row">
     <button class="btn" type="submit">{{if .Editing}}Сохранить{{else}}Создать{{end}}</button>
     {{if .Editing}}
-      <button class="btn danger" type="submit" formaction="/admin/users/delete">Удалить</button>
+      <button class="btn danger" type="submit" formaction="/admin/users/delete" onclick="return confirm('Удалить пользователя?')">Удалить</button>
     {{end}}
   </div>
 </form>

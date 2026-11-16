@@ -23,7 +23,7 @@ func (s *Pages) Cart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.Title = "Корзина"
-	p.Hint = "Сюда попадают товары текущего клиента."
+	p.Hint = "Проверьте состав и оформите заказ."
 	s.fillCart(&p)
 	s.render(w, "cart", p)
 }
@@ -308,10 +308,10 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 	p.Staff = p.Key == "manager" || p.Key == "admin"
 	if p.Staff {
 		p.Title = "Заказы"
-		p.Hint = "Все заказы клиентов. Можно отобрать по статусу и датам и сменить статус."
+		p.Hint = "Статус идёт по шагам. Отменить можно, пока заказ не готов к выдаче."
 	} else {
 		p.Title = "Мои заказы"
-		p.Hint = "Только ваши заказы. Статус меняет магазин."
+		p.Hint = "Отменить свой заказ можно, пока его не подготовили к выдаче."
 	}
 	q := r.URL.Query()
 	p.Status = q.Get("status")
@@ -340,7 +340,7 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, order := range orders {
-		row := orderRow{ID: order.ID, When: formatDate(order.DateTime), Status: order.Status, Sum: money(s.orderSum(order.ID))}
+		row := orderRow{ID: order.ID, When: formatDate(order.DateTime), Status: order.Status, Sum: money(s.orderSum(order.ID)), Next: nextStatuses(order.Status)}
 		if p.Staff {
 			if buyer, err := s.Repo.GetUser(order.UserID); err == nil {
 				row.Buyer = buyer.Name
@@ -396,13 +396,13 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 	}
 	p.Title = "Заказ"
 	if p.Staff {
-		p.Hint = "Здесь можно сменить статус."
+		p.Hint = "Статус идёт по очереди. Отменить можно, пока заказ не готов к выдаче."
 	}
 	p.Order = order
 	p.Comment = order.Comment
 	p.CanCancel = !p.Staff && order.Status != "Отменён" && order.Status != "Готов к выдаче"
 	p.When = formatDate(order.DateTime)
-	p.Statuses = []string{"Принят", "В работе", "Собран", "Готов к выдаче", "Отменён"}
+	p.Statuses = nextStatuses(order.Status)
 	if buyer, err := s.Repo.GetUser(order.UserID); err == nil {
 		p.Buyer = buyer.Name
 	} else {
@@ -472,8 +472,8 @@ func (s *Pages) OrderStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	status := r.FormValue("status")
-	if !statusOk(status) {
-		setFlash(w, "Неизвестный статус")
+	if !statusStep(order.Status, status) {
+		setFlash(w, "Так статус не меняют: только следующий шаг или отмена, пока заказ не готов к выдаче")
 		goTo(w, r, "/orders/"+id)
 		return
 	}
@@ -556,10 +556,24 @@ func (s *Pages) OrderCancel(w http.ResponseWriter, r *http.Request) {
 	goTo(w, r, "/orders/"+id)
 }
 
-func statusOk(s string) bool {
-	list := []string{"Принят", "В работе", "Собран", "Готов к выдаче", "Отменён"}
-	for _, item := range list {
-		if item == s {
+// Клиент может только отменить заказ. Сотрудник ведёт его по шагам
+// и тоже может отменить, но не раньше и не позже: готовый к выдаче уже не трогаем.
+func nextStatuses(current string) []string {
+	switch current {
+	case "Принят":
+		return []string{"Принят", "В работе", "Отменён"}
+	case "В работе":
+		return []string{"В работе", "Собран", "Отменён"}
+	case "Собран":
+		return []string{"Собран", "Готов к выдаче", "Отменён"}
+	default:
+		return []string{current}
+	}
+}
+
+func statusStep(from, to string) bool {
+	for _, item := range nextStatuses(from) {
+		if item == to {
 			return true
 		}
 	}

@@ -24,14 +24,14 @@ type page struct {
 	NavCatalog, NavOrders, NavCart        bool
 	NavProducts, NavUsers, NavRoles       bool
 
-	Fields                 []filterField
-	Sort                   string
-	Cards                  []card
-	RangeText              string
-	Page, Pages            int
-	PagePath               string
-	PrevPage, NextPage     int
-	Keep                   keepQuery
+	Fields             []filterField
+	Sort               string
+	Cards              []card
+	RangeText          string
+	Page, Pages        int
+	PagePath           string
+	PrevPage, NextPage int
+	Keep               keepQuery
 
 	Product   *models.Product
 	Photos    []photoCard
@@ -83,6 +83,7 @@ type cartLine struct {
 
 type orderRow struct {
 	ID, When, Buyer, Sum, Status string
+	Next                         []string
 }
 
 type itemGroup struct {
@@ -167,6 +168,11 @@ func roleKey(name string) string {
 	}
 }
 
+// Гость — это витрина без входа, а не учётка. В списке ролей она есть, в форму пользователя её не кладу.
+func skipRole(name, id, current string) bool {
+	return systemRole(name) && roleKey(name) == "custom" && id != current
+}
+
 func systemRole(name string) bool {
 	switch strings.ToLower(strings.TrimSpace(name)) {
 	case "guest", "client", "manager", "admin", "гость", "клиент", "менеджер", "администратор":
@@ -179,16 +185,16 @@ func systemRole(name string) bool {
 func roleNote(name string) string {
 	switch roleKey(name) {
 	case "client":
-		return "права клиента · системная"
+		return "Покупает в каталоге и видит свои заказы"
 	case "manager":
-		return "права менеджера · системная"
+		return "Ведёт заказы клиентов"
 	case "admin":
-		return "права администратора · системная"
+		return "Товары, пользователи и заказы"
 	default:
 		if systemRole(name) {
-			return "системная"
+			return "Каталог без входа. Учёток с этой ролью не делают"
 		}
-		return "только просмотр каталога"
+		return "Смотрит каталог, заказы не оформляет"
 	}
 }
 
@@ -379,10 +385,60 @@ func parsePrice(s string) (float64, bool) {
 	return math.Round(n*100) / 100, true
 }
 
+// Почта вида имя@домен.зона. Одного знака @ мало: «а@б» и «а@б.в» не пропускаю.
 func validEmail(s string) bool {
-	at := strings.Index(s, "@")
-	dot := strings.LastIndex(s, ".")
-	return at > 0 && dot > at+1 && dot < len(s)-1 && !strings.ContainsAny(s, " \t")
+	if strings.Count(s, "@") != 1 || strings.Contains(s, "..") {
+		return false
+	}
+	parts := strings.Split(s, "@")
+	local, domain := parts[0], parts[1]
+	if len(local) == 0 || len(domain) < 4 {
+		return false
+	}
+	if local[0] == '.' || local[len(local)-1] == '.' {
+		return false
+	}
+	for _, r := range local {
+		ok := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '.' || r == '_' || r == '-' || r == '+'
+		if !ok {
+			return false
+		}
+	}
+	dot := strings.LastIndex(domain, ".")
+	if dot < 1 || dot > len(domain)-3 {
+		return false
+	}
+	for _, r := range domain {
+		ok := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '.' || r == '-'
+		if !ok {
+			return false
+		}
+	}
+	return true
+}
+
+// Российский номер: +7 или 8 и ещё 10 цифр. Пробелы, скобки и дефисы можно.
+func validPhone(s string) bool {
+	if s == "" || strings.Count(s, "+") > 1 {
+		return false
+	}
+	if strings.Contains(s, "+") && !strings.HasPrefix(s, "+") {
+		return false
+	}
+	digits := make([]byte, 0, 11)
+	for _, r := range s {
+		switch {
+		case r >= '0' && r <= '9':
+			digits = append(digits, byte(r))
+		case r == '+' || r == ' ' || r == '-' || r == '(' || r == ')':
+		default:
+			return false
+		}
+	}
+	if len(digits) != 11 {
+		return false
+	}
+	return digits[0] == '7' || digits[0] == '8'
 }
 
 func nowStamp() string {
@@ -392,7 +448,7 @@ func nowStamp() string {
 func sortOptions(field string, values []string) []string {
 	rank := map[string][]string{
 		"size":   {"XS", "S", "M", "L", "XL", "XXL"},
-		"season": {"весна", "лето", "осень", "зима", "демисезон"},
+		"season": {"лето", "демисезон", "зима", "всесезон"},
 	}
 	order, ok := rank[field]
 	if !ok {

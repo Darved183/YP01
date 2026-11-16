@@ -19,7 +19,7 @@
       <form method="post" action="/admin/photos/delete">
         <input type="hidden" name="id" value="{{.Photo.ID}}">
         <input type="hidden" name="back" value="/item/{{.Photo.ProductID}}">
-        <button class="btn danger" type="submit">Удалить фотографию</button>
+        <button class="btn danger" type="submit" onclick="return confirm('Удалить фотографию?')">Удалить фотографию</button>
       </form>
     {{end}}
   </div>

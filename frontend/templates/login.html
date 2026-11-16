@@ -1,7 +1,6 @@
 {{define "content"}}
 <div class="narrow">
   <form class="panel stack" method="post" action="/login">
-    <h2>Вход</h2>
     {{if .Error}}<p class="form-error">{{.Error}}</p>{{end}}
     <input type="hidden" name="next" value="{{.Next}}">
     <label>Почта<input name="email" type="email" autocomplete="username" required autofocus value="{{.Email}}"></label>
