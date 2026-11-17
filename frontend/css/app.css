@@ -182,6 +182,8 @@ footer { border-top: 1px solid var(--line); padding: 1.25rem 0 1.7rem; backgroun
 }
 .card-qty { width: calc(100% - .8rem); }
 .buy-qty { width: 100%; max-width: 280px; }
+.buy-row { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; }
+.buy-row .buy-qty { width: auto; flex: 1 1 160px; max-width: 220px; }
 .card-qty button, .card-qty span, .buy-qty button, .buy-qty span {
   height: 2.55rem;
   display: grid;
