@@ -30,36 +30,39 @@ type page struct {
 	RangeText string
 	Return    string
 
-	Product   *models.Product
-	Photos    []photoCard
-	Available int
-	InCart    int
-	CartID    string
-	Editing   bool
-	HasFile   bool
-	Photo     *models.Photo
-	Lines     []cartLine
-	Total     string
-	Broken    bool
-	Orders    []orderRow
-	Staff     bool
-	Status    string
-	From, To  string
-	Statuses  []string
-	Groups    []itemGroup
-	Sum       string
-	Buyer     string
-	When      string
-	Order     *models.Order
-	OrderRef  string
-	Comment   string
-	CanCancel bool
-	Reasons   []string
-	Sizes     []sizeChoice
-	Live      bool
-	Users     []userRow
-	Roles     []roleRow
-	RoleID    string
+	Product                        *models.Product
+	Photos                         []photoCard
+	Available                      int
+	InCart                         int
+	CartID                         string
+	Editing                        bool
+	HasFile                        bool
+	Photo                          *models.Photo
+	Lines                          []cartLine
+	Total                          string
+	Broken                         bool
+	Orders                         []orderRow
+	Staff                          bool
+	Status                         string
+	From, To                       string
+	Statuses                       []string
+	Groups                         []itemGroup
+	Sum                            string
+	Buyer                          string
+	When                           string
+	Order                          *models.Order
+	OrderRef                       string
+	Comment                        string
+	Receiver, Phone, City, Address string
+	Delivery, Payment, Place, Note string
+	Deliveries, Payments, Places   []string
+	CanCancel                      bool
+	Reasons                        []string
+	Sizes                          []sizeChoice
+	Live                           bool
+	Users                          []userRow
+	Roles                          []roleRow
+	RoleID                         string
 }
 
 type filterField struct {

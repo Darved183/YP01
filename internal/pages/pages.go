@@ -19,7 +19,7 @@ type Pages struct {
 func New(repo *database.Repository) (*Pages, error) {
 	s := &Pages{Repo: repo, pages: map[string]*template.Template{}}
 	names := []string{
-		"catalog", "product", "photo", "login", "register", "cart",
+		"catalog", "product", "photo", "login", "register", "cart", "checkout",
 		"orders", "order", "products", "product_form", "users", "user_form", "policy", "message",
 	}
 	funcs := template.FuncMap{
@@ -55,6 +55,7 @@ func (s *Pages) Register(r *mux.Router) {
 	r.HandleFunc("/cart/add", s.CartAdd).Methods("POST")
 	r.HandleFunc("/cart/count", s.CartCount).Methods("POST")
 	r.HandleFunc("/cart/remove", s.CartRemove).Methods("POST")
+	r.HandleFunc("/checkout", s.CheckoutForm).Methods("GET")
 	r.HandleFunc("/checkout", s.Checkout).Methods("POST")
 	r.HandleFunc("/orders", s.Orders).Methods("GET")
 	r.HandleFunc("/orders/{id}", s.Order).Methods("GET")

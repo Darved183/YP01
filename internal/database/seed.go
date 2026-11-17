@@ -362,6 +362,32 @@ func ensureProductSizes(db *sqlx.DB) error {
 	return nil
 }
 
+func ensureOrderDelivery(db *sqlx.DB) error {
+	cols := []struct{ name, ddl string }{
+		{"receiver", `ALTER TABLE orders ADD COLUMN receiver TEXT NOT NULL DEFAULT ''`},
+		{"phone", `ALTER TABLE orders ADD COLUMN phone TEXT NOT NULL DEFAULT ''`},
+		{"city", `ALTER TABLE orders ADD COLUMN city TEXT NOT NULL DEFAULT ''`},
+		{"address", `ALTER TABLE orders ADD COLUMN address TEXT NOT NULL DEFAULT ''`},
+		{"delivery", `ALTER TABLE orders ADD COLUMN delivery TEXT NOT NULL DEFAULT ''`},
+		{"payment", `ALTER TABLE orders ADD COLUMN payment TEXT NOT NULL DEFAULT ''`},
+		{"place", `ALTER TABLE orders ADD COLUMN place TEXT NOT NULL DEFAULT ''`},
+		{"note", `ALTER TABLE orders ADD COLUMN note TEXT NOT NULL DEFAULT ''`},
+	}
+	for _, col := range cols {
+		ok, err := hasColumn(db, "orders", col.name)
+		if err != nil {
+			return err
+		}
+		if ok {
+			continue
+		}
+		if _, err = db.Exec(col.ddl); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func ensureComment(db *sqlx.DB) error {
 	var n int
 	if err := db.Get(&n, `SELECT COUNT(*) FROM pragma_table_info('orders') WHERE name = 'comment'`); err != nil {

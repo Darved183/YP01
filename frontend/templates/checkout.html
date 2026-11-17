@@ -1,0 +1,106 @@
+{{define "content"}}
+<div class="stack">
+  <div class="panel stack">
+    {{range .Lines}}
+      <p>{{.Name}} <span class="muted small">{{.Meta}} · {{.Count}} шт. · {{.Sum}}</span></p>
+    {{end}}
+    <p class="total">{{.Total}}</p>
+  </div>
+  {{if .Broken}}
+    <p class="form-error">Проверьте корзину: товар удалён или его больше, чем осталось на складе.</p>
+    <p><a class="btn ghost" href="/cart">В корзину</a></p>
+  {{else}}
+    <form class="form-grid" method="post" action="/checkout">
+      {{if .Error}}<p class="form-error wide">{{.Error}}</p>{{end}}
+      <label>Получатель<input name="receiver" required maxlength="80" value="{{.Receiver}}"></label>
+      <label>Телефон<input name="phone" required maxlength="16" inputmode="numeric" autocomplete="tel" pattern="\+7 \d{3} \d{3}-\d{2}-\d{2}" title="+7 и 10 цифр" value="{{.Phone}}" data-phone></label>
+      <label>Доставка
+        <select name="delivery" required onchange="shopDelivery(this)">
+          {{$delivery := .Delivery}}
+          {{range .Deliveries}}
+            <option value="{{.}}"{{if eq . $delivery}} selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </label>
+      <label>Оплата
+        <select name="payment" required>
+          {{$pay := .Payment}}
+          {{range .Payments}}
+            <option value="{{.}}"{{if eq . $pay}} selected{{end}}>{{.}}</option>
+          {{end}}
+        </select>
+      </label>
+      <p class="muted small wide" data-delivery-hint></p>
+      <div class="wide stack" data-address{{if eq .Delivery "Самовывоз"}} hidden{{end}}>
+        <label>Куда привезти
+          <select name="place">
+            {{$place := .Place}}
+            {{range .Places}}
+              <option value="{{.}}"{{if eq . $place}} selected{{end}}>{{.}}</option>
+            {{end}}
+          </select>
+        </label>
+        <label>Город<input name="city" maxlength="80" value="{{.City}}"></label>
+        <label>Адрес<input name="address" maxlength="200" placeholder="Улица, дом, квартира" value="{{.Address}}"></label>
+      </div>
+      <label class="wide">Комментарий к заказу<textarea name="note" maxlength="300" placeholder="Домофон, этаж, удобное время">{{.Note}}</textarea></label>
+      <div class="wide row">
+        <button class="btn" type="submit">Подтвердить заказ</button>
+        <a class="btn ghost" href="/cart">Назад в корзину</a>
+      </div>
+    </form>
+  {{end}}
+</div>
+<script>
+function shopDelivery(sel) {
+  var pickup = sel.value === "Самовывоз";
+  var box = document.querySelector("[data-address]");
+  if (box) box.hidden = pickup;
+  var hint = document.querySelector("[data-delivery-hint]");
+  var hints = {
+    "СДЭК": "Пункт выдачи или курьер СДЭК.",
+    "Почта России": "Отделение или доставка до двери.",
+    "Авито Доставка": "Пункт выдачи партнёра.",
+    "Курьер магазина": "Привезём по вашему адресу.",
+    "Самовывоз": "Забрать в магазине, адрес не нужен."
+  };
+  if (hint) hint.textContent = hints[sel.value] || "";
+}
+(function () {
+  var sel = document.querySelector("select[name=delivery]");
+  if (sel) shopDelivery(sel);
+  var input = document.querySelector("[data-phone]");
+  if (!input) return;
+  function digits(value) {
+    var d = "";
+    for (var i = 0; i < value.length; i++) {
+      var c = value.charAt(i);
+      if (c >= "0" && c <= "9") d += c;
+    }
+    if (d.charAt(0) === "7" || d.charAt(0) === "8") d = d.slice(1);
+    return d.slice(0, 10);
+  }
+  function mask(d) {
+    var out = "+7";
+    if (!d) return out;
+    out += " " + d.slice(0, 3);
+    if (d.length > 3) out += " " + d.slice(3, 6);
+    if (d.length > 6) out += "-" + d.slice(6, 8);
+    if (d.length > 8) out += "-" + d.slice(8, 10);
+    return out;
+  }
+  function paint() {
+    var next = mask(digits(input.value));
+    if (input.value !== next) input.value = next;
+  }
+  input.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key.length !== 1) return;
+    if (e.key < "0" || e.key > "9") e.preventDefault();
+  });
+  input.addEventListener("input", paint);
+  input.addEventListener("focus", paint);
+  paint();
+})();
+</script>
+{{end}}

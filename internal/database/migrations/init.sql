@@ -59,7 +59,15 @@ CREATE TABLE IF NOT EXISTS orders (
     user_id   TEXT NOT NULL REFERENCES users(id),
     date_time TEXT NOT NULL,
     status    TEXT NOT NULL,
-    comment   TEXT NOT NULL DEFAULT ''
+    comment   TEXT NOT NULL DEFAULT '',
+    receiver  TEXT NOT NULL DEFAULT '',
+    phone     TEXT NOT NULL DEFAULT '',
+    city      TEXT NOT NULL DEFAULT '',
+    address   TEXT NOT NULL DEFAULT '',
+    delivery  TEXT NOT NULL DEFAULT '',
+    payment   TEXT NOT NULL DEFAULT '',
+    place     TEXT NOT NULL DEFAULT '',
+    note      TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS order_items (

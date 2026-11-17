@@ -209,12 +209,130 @@ func (s *Pages) ownLine(userID, id string) (*models.Cart, error) {
 	return line, nil
 }
 
+func deliveryWays() []string {
+	return []string{"СДЭК", "Почта России", "Авито Доставка", "Курьер магазина", "Самовывоз"}
+}
+
+func payWays() []string {
+	return []string{"СБП", "Карта онлайн", "При получении"}
+}
+
+func placeWays() []string {
+	return []string{"До двери", "В пункт выдачи"}
+}
+
+func knownChoice(list []string, value string) bool {
+	for _, item := range list {
+		if item == value {
+			return true
+		}
+	}
+	return false
+}
+
+func cutRunes(s string, max int) string {
+	runes := []rune(s)
+	if len(runes) <= max {
+		return s
+	}
+	return string(runes[:max])
+}
+
+func readCheckout(r *http.Request) (page, string) {
+	var p page
+	p.Receiver = strings.TrimSpace(r.FormValue("receiver"))
+	p.Phone = strings.TrimSpace(r.FormValue("phone"))
+	p.City = strings.TrimSpace(r.FormValue("city"))
+	p.Address = strings.TrimSpace(r.FormValue("address"))
+	p.Delivery = strings.TrimSpace(r.FormValue("delivery"))
+	p.Payment = strings.TrimSpace(r.FormValue("payment"))
+	p.Place = strings.TrimSpace(r.FormValue("place"))
+	p.Note = cutRunes(strings.TrimSpace(r.FormValue("note")), 300)
+	if !nameOK(p.Receiver) {
+		return p, "Укажите имя получателя"
+	}
+	if !validPhone(p.Phone) {
+		return p, "Телефон: +7 и ещё 10 цифр"
+	}
+	if !knownChoice(deliveryWays(), p.Delivery) {
+		return p, "Выберите способ доставки"
+	}
+	if !knownChoice(payWays(), p.Payment) {
+		return p, "Выберите способ оплаты"
+	}
+	if p.Delivery == "Самовывоз" {
+		p.City = ""
+		p.Address = ""
+		p.Place = ""
+		return p, ""
+	}
+	if !knownChoice(placeWays(), p.Place) {
+		return p, "Выберите, куда привезти"
+	}
+	if len([]rune(p.City)) < 2 || len([]rune(p.City)) > 80 {
+		return p, "Укажите город"
+	}
+	if len([]rune(p.Address)) < 5 || len([]rune(p.Address)) > 200 {
+		return p, "Укажите адрес: улица, дом, квартира"
+	}
+	return p, ""
+}
+
+func (s *Pages) showCheckout(w http.ResponseWriter, r *http.Request, p *page) {
+	p.Title = "Оформление заказа"
+	p.Hint = "Куда привезти заказ и как его оплатить."
+	p.Deliveries = deliveryWays()
+	p.Payments = payWays()
+	p.Places = placeWays()
+	s.fillCart(p)
+	if len(p.Lines) == 0 {
+		setFlash(w, "Корзина пуста")
+		goTo(w, r, "/cart")
+		return
+	}
+	s.render(w, "checkout", *p)
+}
+
+func (s *Pages) CheckoutForm(w http.ResponseWriter, r *http.Request) {
+	p := s.base(w, r)
+	if p.Key != "client" {
+		p.Title = "Нет доступа"
+		p.Text = "Оформлять заказ может только клиент."
+		s.render(w, "message", p)
+		return
+	}
+	p.Receiver = p.User.Name
+	p.Phone = p.User.Phone
+	p.Delivery = "СДЭК"
+	p.Payment = "СБП"
+	p.Place = "В пункт выдачи"
+	s.showCheckout(w, r, &p)
+}
+
 func (s *Pages) Checkout(w http.ResponseWriter, r *http.Request) {
 	p := s.base(w, r)
 	if p.Key != "client" {
 		p.Title = "Нет доступа"
 		p.Text = "Оформлять заказ может только клиент."
 		s.render(w, "message", p)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad form", http.StatusBadRequest)
+		return
+	}
+	form, msg := readCheckout(r)
+	p.Receiver = form.Receiver
+	p.Phone = form.Phone
+	p.City = form.City
+	p.Address = form.Address
+	p.Delivery = form.Delivery
+	p.Payment = form.Payment
+	p.Place = form.Place
+	p.Note = form.Note
+	if msg != "" {
+		p.Error = msg
+		s.showCheckout(w, r, &p)
 		return
 	}
 	lines, err := s.Repo.GetCartByUser(p.User.ID)
@@ -304,8 +422,9 @@ func (s *Pages) Checkout(w http.ResponseWriter, r *http.Request) {
 	}
 	orderNo++
 	_, err = tx.Exec(
-		`INSERT INTO orders (id, number, user_id, date_time, status, comment) VALUES (?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO orders (id, number, user_id, date_time, status, comment, receiver, phone, city, address, delivery, payment, place, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		orderID, orderNo, p.User.ID, nowStamp(), "Принят", "",
+		p.Receiver, p.Phone, p.City, p.Address, p.Delivery, p.Payment, p.Place, p.Note,
 	)
 	if err != nil {
 		setFlash(w, "Не получилось оформить заказ")

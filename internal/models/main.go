@@ -59,6 +59,14 @@ type Order struct {
 	DateTime string `json:"date_time" db:"date_time"`
 	Status   string `json:"status" db:"status"`
 	Comment  string `json:"comment" db:"comment"`
+	Receiver string `json:"receiver" db:"receiver"`
+	Phone    string `json:"phone" db:"phone"`
+	City     string `json:"city" db:"city"`
+	Address  string `json:"address" db:"address"`
+	Delivery string `json:"delivery" db:"delivery"`
+	Payment  string `json:"payment" db:"payment"`
+	Place    string `json:"place" db:"place"`
+	Note     string `json:"note" db:"note"`
 }
 
 type OrderItem struct {

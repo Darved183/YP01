@@ -33,6 +33,19 @@
       <p><span class="muted small">Причина отмены</span><br>{{.Comment}}</p>
     {{end}}
   </div>
+  {{if .Order.Delivery}}
+    <div class="panel stack">
+      <p><span class="muted small">Доставка</span><br>{{.Order.Delivery}}{{if .Order.Place}} · {{.Order.Place}}{{end}}</p>
+      {{if .Order.Address}}
+        <p><span class="muted small">Адрес</span><br>{{.Order.City}}, {{.Order.Address}}</p>
+      {{else}}
+        <p>Самовывоз из магазина</p>
+      {{end}}
+      <p><span class="muted small">Получатель</span><br>{{.Order.Receiver}}, {{.Order.Phone}}</p>
+      {{if .Order.Payment}}<p><span class="muted small">Оплата</span><br>{{.Order.Payment}}</p>{{end}}
+      {{if .Order.Note}}<p><span class="muted small">Комментарий к заказу</span><br>{{.Order.Note}}</p>{{end}}
+    </div>
+  {{end}}
   <div class="table-wrap">
     <table>
       <thead><tr><th>Товар</th><th>Шт.</th><th>Цена</th><th>Сумма</th></tr></thead>

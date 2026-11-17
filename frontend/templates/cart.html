@@ -42,7 +42,7 @@
       {{if .Broken}}
         <p class="form-error">Проверьте корзину: товар удалён или его больше, чем осталось на складе.</p>
       {{else}}
-        <form method="post" action="/checkout"><button class="btn" type="submit">Оформить заказ</button></form>
+        <a class="btn" href="/checkout">Оформить заказ</a>
       {{end}}
     </div>
   </div>

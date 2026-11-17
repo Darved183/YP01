@@ -258,7 +258,7 @@ label {
   font-size: .82rem;
   font-weight: 650;
 }
-label[hidden], [data-cancel][hidden] { display: none; }
+label[hidden], [data-cancel][hidden], [data-address][hidden] { display: none; }
 [data-cancel] { display: grid; gap: .55rem; margin-top: .65rem; }
 label.check {
   display: flex;
