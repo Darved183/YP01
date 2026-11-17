@@ -168,6 +168,38 @@ func ensureOrderNumbers(db *sqlx.DB) error {
 	return err
 }
 
+// Короткий номер клиента. В заказах его видно вместо длинного id.
+func ensureUserNumbers(db *sqlx.DB) error {
+	ok, err := hasColumn(db, "users", "number")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		if _, err = db.Exec(`ALTER TABLE users ADD COLUMN number INTEGER NOT NULL DEFAULT 0`); err != nil {
+			return err
+		}
+	}
+	var ids []string
+	if err = db.Select(&ids, `SELECT id FROM users WHERE number = 0 ORDER BY registration_date, id`); err != nil {
+		return err
+	}
+	var max int
+	if err = db.Get(&max, `SELECT COALESCE(MAX(number), 0) FROM users`); err != nil {
+		return err
+	}
+	if max < 1000 {
+		max = 1000
+	}
+	for _, id := range ids {
+		max++
+		if _, err = db.Exec(`UPDATE users SET number = ? WHERE id = ?`, max, id); err != nil {
+			return err
+		}
+	}
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_number ON users(number)`)
+	return err
+}
+
 func ensureOrderText(db *sqlx.DB) error {
 	cols := []struct{ name, ddl string }{
 		{"name", `ALTER TABLE order_items ADD COLUMN name TEXT NOT NULL DEFAULT ''`},

@@ -107,6 +107,10 @@ func Load() (*sqlx.DB, error) {
 		db.Close()
 		return nil, err
 	}
+	if err = ensureUserNumbers(db); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err = ensureOrderText(db); err != nil {
 		db.Close()
 		return nil, err

@@ -378,7 +378,7 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 		if p.Staff {
 			row.Next = staffStatuses()
 			if buyer, err := s.Repo.GetUser(order.UserID); err == nil {
-				row.Buyer = buyer.Name
+				row.Buyer = buyerLine(buyer.Name, buyer.Number)
 			} else {
 				row.Buyer = "Пользователь удалён"
 			}
@@ -477,7 +477,7 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 		p.Statuses = staffStatuses()
 	}
 	if buyer, err := s.Repo.GetUser(order.UserID); err == nil {
-		p.Buyer = buyer.Name
+		p.Buyer = buyerLine(buyer.Name, buyer.Number)
 	} else {
 		p.Buyer = "Пользователь удалён"
 	}
@@ -625,6 +625,13 @@ func (s *Pages) OrderCancel(w http.ResponseWriter, r *http.Request) {
 	}
 	setFlash(w, "Заказ отменён")
 	goTo(w, r, "/orders/"+ref)
+}
+
+func buyerLine(name string, number int) string {
+	if number > 0 {
+		return name + " (" + strconv.Itoa(number) + ")"
+	}
+	return name
 }
 
 func orderRef(number int, id string) string {

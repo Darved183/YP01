@@ -11,37 +11,33 @@
   {{end}}
   {{if .Product.Article}}<p class="wide sku">Артикул {{.Product.Article}}</p>{{end}}
   <label class="wide">Название<input name="name" required maxlength="120" value="{{.Product.Name}}"></label>
-  <p class="wide muted small">Тип, размер и цвет можно выбрать из списка. Если нужного нет — напишите его рядом, он сохранится с товаром и появится в фильтрах.</p>
   {{$type := .Product.Type}}
   {{$size := .Product.Size}}
   {{$color := .Product.Color}}
   {{range .Fields}}
     {{if eq .Key "type"}}
       <label>Тип
-        <select name="type">
-          <option value="">Из списка</option>
+        <select name="type" required>
+          <option value="">Выберите</option>
           {{range .Options}}<option value="{{.}}"{{if eq . $type}} selected{{end}}>{{.}}</option>{{end}}
         </select>
       </label>
-      <label>Новый тип<input name="type_new" maxlength="40" placeholder="если нет в списке"></label>
     {{end}}
     {{if eq .Key "size"}}
       <label>Размер
-        <select name="size">
-          <option value="">Из списка</option>
+        <select name="size" required>
+          <option value="">Выберите</option>
           {{range .Options}}<option value="{{.}}"{{if eq . $size}} selected{{end}}>{{.}}</option>{{end}}
         </select>
       </label>
-      <label>Новый размер<input name="size_new" maxlength="40" placeholder="если нет в списке"></label>
     {{end}}
     {{if eq .Key "color"}}
       <label>Цвет
-        <select name="color">
-          <option value="">Из списка</option>
+        <select name="color" required>
+          <option value="">Выберите</option>
           {{range .Options}}<option value="{{.}}"{{if eq . $color}} selected{{end}}>{{.}}</option>{{end}}
         </select>
       </label>
-      <label>Новый цвет<input name="color_new" maxlength="40" placeholder="если нет в списке"></label>
     {{end}}
   {{end}}
   <label>Пол

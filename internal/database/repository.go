@@ -252,11 +252,29 @@ func (r *Repository) CreateUser(u *models.User) error {
 	if u.ID == "" {
 		u.ID = uuid.NewString()
 	}
-	_, err := r.DB.NamedExec(`
-		INSERT INTO users (id, name, email, phone, role_id, registration_date, password)
-		VALUES (:id, :name, :email, :phone, :role_id, :registration_date, :password)
+	tx, err := r.DB.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if u.Number < 1 {
+		var max int
+		if err = tx.Get(&max, `SELECT COALESCE(MAX(number), 0) FROM users`); err != nil {
+			return err
+		}
+		if max < 1000 {
+			max = 1000
+		}
+		u.Number = max + 1
+	}
+	_, err = tx.NamedExec(`
+		INSERT INTO users (id, number, name, email, phone, role_id, registration_date, password)
+		VALUES (:id, :number, :name, :email, :phone, :role_id, :registration_date, :password)
 	`, u)
-	return err
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (r *Repository) GetUsers(f UserFilter) ([]models.User, error) {

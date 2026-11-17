@@ -170,10 +170,10 @@ func readProduct(r *http.Request) (models.Product, string) {
 	p := models.Product{
 		ID:          r.FormValue("id"),
 		Name:        strings.TrimSpace(r.FormValue("name")),
-		Type:        freshOrList(r, "type"),
+		Type:        strings.TrimSpace(r.FormValue("type")),
 		Gender:      strings.TrimSpace(r.FormValue("gender")),
-		Size:        freshOrList(r, "size"),
-		Color:       freshOrList(r, "color"),
+		Size:        strings.TrimSpace(r.FormValue("size")),
+		Color:       strings.TrimSpace(r.FormValue("color")),
 		Brand:       strings.TrimSpace(r.FormValue("brand")),
 		Season:      strings.TrimSpace(r.FormValue("season")),
 		Description: strings.TrimSpace(r.FormValue("description")),
@@ -182,7 +182,7 @@ func readProduct(r *http.Request) (models.Product, string) {
 		return p, "Заполните все поля товара"
 	}
 	if p.Type == "" || p.Size == "" || p.Color == "" {
-		return p, "Выберите тип, размер и цвет или напишите новые"
+		return p, "Выберите тип, размер и цвет"
 	}
 	if longText(p.Type, 40) || longText(p.Size, 40) || longText(p.Color, 40) {
 		return p, "Тип, размер и цвет не длиннее 40 символов"
@@ -206,15 +206,6 @@ func readProduct(r *http.Request) (models.Product, string) {
 		p.Name = string(runes[:120])
 	}
 	return p, ""
-}
-
-// Новое поле важнее списка. Если такое слово уже есть в каталоге, берём его написание.
-func freshOrList(r *http.Request, key string) string {
-	fresh := strings.Join(strings.Fields(r.FormValue(key+"_new")), " ")
-	if fresh != "" {
-		return fresh
-	}
-	return strings.Join(strings.Fields(r.FormValue(key)), " ")
 }
 
 func longText(s string, max int) bool {

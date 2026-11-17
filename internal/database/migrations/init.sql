@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS roles (
 
 CREATE TABLE IF NOT EXISTS users (
     id                TEXT PRIMARY KEY,
+    number            INTEGER NOT NULL DEFAULT 0,
     name              TEXT NOT NULL,
     email             TEXT NOT NULL UNIQUE,
     phone             TEXT NOT NULL,

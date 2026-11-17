@@ -29,6 +29,7 @@ type Role struct {
 
 type User struct {
 	ID               string `json:"id" db:"id"`
+	Number           int    `json:"number" db:"number"`
 	Name             string `json:"name" db:"name"`
 	Email            string `json:"email" db:"email"`
 	Phone            string `json:"phone" db:"phone"`
