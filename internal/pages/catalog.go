@@ -46,6 +46,9 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 			s.fail(w, p, "Ошибка", "Не получилось прочитать каталог", err)
 			return
 		}
+		if item.key == "season" {
+			values = seasonChoices(values)
+		}
 		cur := q.Get(item.key)
 		p.Fields = append(p.Fields, filterField{
 			Key: item.key, Label: item.label, Current: cur, Options: sortOptions(item.key, values),

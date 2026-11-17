@@ -418,6 +418,20 @@ func nowStamp() string {
 	return time.Now().Format("2006-01-02T15:04:05")
 }
 
+// Всесезон есть в карточке товара, даже если в каталоге такой вещи ещё нет.
+func seasonChoices(values []string) []string {
+	have := map[string]bool{}
+	for _, name := range values {
+		have[name] = true
+	}
+	for _, name := range []string{"лето", "демисезон", "зима", "всесезон"} {
+		if !have[name] {
+			values = append(values, name)
+		}
+	}
+	return values
+}
+
 func sortOptions(field string, values []string) []string {
 	rank := map[string][]string{
 		"size":   {"XS", "S", "M", "L", "XL", "XXL"},
