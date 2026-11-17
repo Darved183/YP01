@@ -8,13 +8,15 @@
   <div>
     {{range .Lines}}
       <article class="cart-line">
-        {{if .Missing}}
+        {{if .HasFile}}
+          <img class="thumb" alt="" src="/photo/{{.PhotoID}}">
+        {{else if .Missing}}
           <div class="swatch mini"></div>
         {{else}}
           <div class="swatch mini{{if light .Color}} light{{end}}" style="--c:{{color .Color}}"><span>{{.Brand}}</span></div>
         {{end}}
         <div>
-          {{if .Missing}}Товар удалён{{else}}<a href="/item/{{.Article}}">{{.Name}}</a>{{end}}
+          {{if .Missing}}Товар удалён{{else}}<a href="/item/{{if .Article}}{{.Article}}{{else}}{{.ProductID}}{{end}}">{{.Name}}</a>{{end}}
           <p class="muted small">{{if .Missing}}Уберите позицию{{else}}{{.Meta}}{{end}}</p>
         </div>
         <form class="qty" method="post" action="/cart/count">

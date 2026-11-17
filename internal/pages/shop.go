@@ -43,9 +43,20 @@ func (s *Pages) fillCart(p *page) {
 			p.Broken = true
 		} else {
 			row.Name = item.Name
+			row.Article = item.Article
 			row.Color = item.Color
 			row.Brand = item.Brand
 			row.Meta = item.Size + " · " + item.Color + " · " + money(item.Price)
+			photos, photoErr := s.Repo.PhotosByProduct(item.ID)
+			if photoErr == nil {
+				for _, photo := range photos {
+					if fileExists(photo.Filename) {
+						row.HasFile = true
+						row.PhotoID = photo.ID
+						break
+					}
+				}
+			}
 			row.Price = money(item.Price)
 			var others int
 			_ = s.Repo.DB.Get(&others, `SELECT COALESCE(SUM(count),0) FROM cart WHERE product_id = ? AND user_id != ?`, item.ID, p.User.ID)

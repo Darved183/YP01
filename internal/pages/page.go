@@ -77,15 +77,15 @@ type photoCard struct {
 }
 
 type cartLine struct {
-	ID, ProductID, Article, Name, Meta, Price, Sum, Color, Brand string
-	Count                                                        int
-	Missing                                                      bool
+	ID, ProductID, Article, Name, Meta, Price, Sum, Color, Brand, PhotoID string
+	Count                                                                 int
+	Missing, HasFile                                                      bool
 }
 
 type orderRow struct {
 	ID, When, Buyer, Sum, Status, Ref string
-	Number                             int
-	Next                               []string
+	Number                            int
+	Next                              []string
 }
 
 type itemGroup struct {
