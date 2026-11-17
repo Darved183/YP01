@@ -86,8 +86,14 @@ func productWhere(f ProductFilter) (string, []interface{}) {
 		args = append(args, f.Brand)
 	}
 	if f.Season != "" {
-		query += " AND season = ?"
-		args = append(args, f.Season)
+		if f.Season == "всесезон" {
+			query += " AND season = ?"
+			args = append(args, f.Season)
+		} else {
+			// Всесезонную вещь носят и летом, и зимой, и в демисезон.
+			query += " AND (season = ? OR season = 'всесезон')"
+			args = append(args, f.Season)
+		}
 	}
 	return query, args
 }
