@@ -43,7 +43,6 @@
   <div class="stack">
     <p class="price large">{{money .Product.Price}}</p>
     {{if .Product.Description}}<p>{{.Product.Description}}</p>{{end}}
-    <p class="muted">В наличии: {{.Product.Stock}} шт.</p>
     <dl class="specs">
       <div><dt>Артикул</dt><dd>{{.Product.Article}}</dd></div>
       <div><dt>Тип</dt><dd>{{.Product.Type}}</dd></div>
@@ -53,6 +52,41 @@
       <div><dt>Бренд</dt><dd>{{.Product.Brand}}</dd></div>
       <div><dt>Сезон</dt><dd>{{.Product.Season}}</dd></div>
     </dl>
+    {{if .Sizes}}
+      <div class="size-pick" data-size-pick>
+        {{range .Sizes}}
+          <button type="button" data-size="{{.Name}}"{{if .On}} class="on"{{end}}>{{.Name}}</button>
+        {{end}}
+      </div>
+      {{range .Sizes}}
+        <div data-size-box="{{.Name}}"{{if not .On}} hidden{{end}}>
+          <p class="muted">В наличии: {{.Stock}} шт.</p>
+          {{if eq $.Key "client"}}
+            {{if gt .InCart 0}}
+              <form class="buy-qty" method="post" action="/cart/count">
+                <input type="hidden" name="id" value="{{.CartID}}">
+                <input type="hidden" name="back" value="/item/{{$.Product.Article}}?size={{.Name}}">
+                <button type="submit" name="op" value="dec" aria-label="Меньше">−</button>
+                <span>{{.InCart}}</span>
+                <button type="submit" name="op" value="inc" aria-label="Больше"{{if lt .Left 1}} disabled{{end}}>+</button>
+              </form>
+            {{else if gt .Left 0}}
+              <form method="post" action="/cart/add">
+                <input type="hidden" name="product_id" value="{{$.Product.ID}}">
+                <input type="hidden" name="size" value="{{.Name}}">
+                <input type="hidden" name="count" value="1">
+                <input type="hidden" name="back" value="/item/{{$.Product.Article}}?size={{.Name}}">
+                <button class="btn" type="submit">В корзину</button>
+              </form>
+            {{else}}
+              <p class="panel">Этого размера нет в наличии.</p>
+            {{end}}
+          {{end}}
+        </div>
+      {{end}}
+    {{else}}
+      <p class="muted">В наличии: {{.Product.Stock}} шт.</p>
+    {{end}}
     {{if eq .Key "guest"}}
       <div class="panel stack">
         <p>Чтобы положить вещь в корзину, войдите в аккаунт.</p>
@@ -61,25 +95,6 @@
           <a class="btn ghost" href="/register?next=/item/{{.Product.Article}}">Регистрация</a>
         </p>
       </div>
-    {{else if eq .Key "client"}}
-      {{if gt .InCart 0}}
-        <form class="buy-qty" method="post" action="/cart/count">
-          <input type="hidden" name="id" value="{{.CartID}}">
-          <input type="hidden" name="back" value="/item/{{.Product.Article}}">
-          <button type="submit" name="op" value="dec" aria-label="Меньше">−</button>
-          <span>{{.InCart}}</span>
-          <button type="submit" name="op" value="inc" aria-label="Больше"{{if lt .Available 1}} disabled{{end}}>+</button>
-        </form>
-      {{else if gt .Available 0}}
-        <form method="post" action="/cart/add">
-          <input type="hidden" name="product_id" value="{{.Product.ID}}">
-          <input type="hidden" name="count" value="1">
-          <input type="hidden" name="back" value="/item/{{.Product.Article}}">
-          <button class="btn" type="submit">В корзину</button>
-        </form>
-      {{else}}
-        <p class="panel">Сейчас нет в наличии.</p>
-      {{end}}
     {{else if eq .Key "admin"}}
       <div class="row">
         <a class="btn" href="/admin/products/{{.Product.ID}}">Редактировать</a>
@@ -90,11 +105,28 @@
       </div>
     {{else if eq .Key "manager"}}
       <p class="muted">Заказ оформляет клиент.</p>
-    {{else}}
+    {{else if ne .Key "client"}}
       <p class="muted">Для этой роли доступен просмотр каталога.</p>
     {{end}}
   </div>
 </div>
+<script>
+(function () {
+  var pick = document.querySelector("[data-size-pick]");
+  if (!pick) return;
+  pick.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-size]");
+    if (!btn) return;
+    var name = btn.getAttribute("data-size");
+    pick.querySelectorAll("[data-size]").forEach(function (item) {
+      item.classList.toggle("on", item === btn);
+    });
+    document.querySelectorAll("[data-size-box]").forEach(function (box) {
+      box.hidden = box.getAttribute("data-size-box") !== name;
+    });
+  });
+})();
+</script>
 {{if .HasFile}}
 <script>
 (function () {

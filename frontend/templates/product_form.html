@@ -12,7 +12,6 @@
   {{if .Product.Article}}<p class="wide sku">Артикул {{.Product.Article}}</p>{{end}}
   <label class="wide">Название<input name="name" required maxlength="120" value="{{.Product.Name}}"></label>
   {{$type := .Product.Type}}
-  {{$size := .Product.Size}}
   {{$color := .Product.Color}}
   {{range .Fields}}
     {{if eq .Key "type"}}
@@ -20,14 +19,6 @@
         <select name="type" required>
           <option value="">Выберите</option>
           {{range .Options}}<option value="{{.}}"{{if eq . $type}} selected{{end}}>{{.}}</option>{{end}}
-        </select>
-      </label>
-    {{end}}
-    {{if eq .Key "size"}}
-      <label>Размер
-        <select name="size" required>
-          <option value="">Выберите</option>
-          {{range .Options}}<option value="{{.}}"{{if eq . $size}} selected{{end}}>{{.}}</option>{{end}}
         </select>
       </label>
     {{end}}
@@ -57,7 +48,16 @@
     </select>
   </label>
   <label>Цена<input name="price" type="number" min="0" step="0.01" required value="{{.Product.Price}}"></label>
-  <label>На складе<input name="stock" type="number" min="0" step="1" required {{if .Editing}}value="{{.Product.Stock}}"{{end}}></label>
+  <div class="wide stack">
+    <p>Размеры</p>
+    <p class="muted small">Отметьте размеры и напишите, сколько штук каждого.</p>
+    {{range .Sizes}}
+      <div class="size-row">
+        <label class="check"><input type="checkbox" name="size" value="{{.Name}}"{{if .On}} checked{{end}}><span>{{.Name}}</span></label>
+        <input name="qty_{{.Name}}" type="number" min="0" step="1" value="{{.Stock}}" aria-label="Сколько {{.Name}}">
+      </div>
+    {{end}}
+  </div>
   <label class="wide">Описание<textarea name="description" maxlength="1000">{{.Product.Description}}</textarea></label>
   {{if not .Editing}}
     <div class="wide stack">

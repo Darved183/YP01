@@ -115,6 +115,10 @@ func Load() (*sqlx.DB, error) {
 		db.Close()
 		return nil, err
 	}
+	if err = ensureProductSizes(db); err != nil {
+		db.Close()
+		return nil, err
+	}
 
 	return db, nil
 }

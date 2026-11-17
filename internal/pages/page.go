@@ -55,6 +55,7 @@ type page struct {
 	Comment   string
 	CanCancel bool
 	Reasons   []string
+	Sizes     []sizeChoice
 	Live      bool
 	Users     []userRow
 	Roles     []roleRow
@@ -66,10 +67,17 @@ type filterField struct {
 	Options             []string
 }
 
+type sizeChoice struct {
+	Name, CartID        string
+	Stock, Left, InCart int
+	On                  bool
+}
+
 type card struct {
 	ID, Article, Name, Type, Gender, Size, Price, Brand, Color, PhotoID, CartID string
 	HasFile                                                                     bool
 	Stock, Left, InCart                                                         int
+	Sizes                                                                       []sizeChoice
 }
 
 type photoCard struct {
@@ -90,10 +98,10 @@ type orderRow struct {
 }
 
 type itemGroup struct {
-	Name, ProductID, Price, Sum, Article, Description, Spec string
-	PhotoID, Color, Brand                                   string
-	Count                                                   int
-	Missing, HasFile                                        bool
+	Name, ProductID, Price, Sum, Article, Description, Spec, Size string
+	PhotoID, Color, Brand                                         string
+	Count                                                         int
+	Missing, HasFile                                              bool
 }
 
 type userRow struct {

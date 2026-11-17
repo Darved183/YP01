@@ -74,7 +74,7 @@ func productWhere(f ProductFilter) (string, []interface{}) {
 		args = append(args, f.Gender)
 	}
 	if f.Size != "" {
-		query += " AND size = ?"
+		query += " AND EXISTS (SELECT 1 FROM product_sizes ps WHERE ps.product_id = products.id AND ps.size = ?)"
 		args = append(args, f.Size)
 	}
 	if f.Color != "" {
@@ -132,6 +132,11 @@ func (r *Repository) ProductField(field string) ([]string, error) {
 	case "type", "gender", "size", "color", "brand", "season":
 	default:
 		return nil, fmt.Errorf("bad field")
+	}
+	if field == "size" {
+		var out []string
+		err := r.DB.Select(&out, `SELECT DISTINCT size FROM product_sizes WHERE size != '' ORDER BY size`)
+		return out, err
 	}
 	var out []string
 	err := r.DB.Select(&out, `SELECT DISTINCT `+field+` FROM products WHERE `+field+` != '' ORDER BY `+field)
@@ -358,7 +363,7 @@ func (r *Repository) CreateCart(c *models.Cart) error {
 		c.ID = uuid.NewString()
 	}
 	_, err := r.DB.NamedExec(`
-		INSERT INTO cart (id, user_id, product_id, count) VALUES (:id, :user_id, :product_id, :count)
+		INSERT INTO cart (id, user_id, product_id, size, count) VALUES (:id, :user_id, :product_id, :size, :count)
 	`, c)
 	return err
 }
@@ -524,14 +529,30 @@ func (r *Repository) GetOrderItems(orderID string) ([]models.OrderItem, error) {
 	return items, err
 }
 
-func (r *Repository) orderItemCounts(orderID string) (map[string]int, error) {
+type itemNeed struct {
+	ProductID string
+	Size      string
+	Count     int
+}
+
+func (r *Repository) orderItemCounts(orderID string) ([]itemNeed, error) {
 	items, err := r.GetOrderItems(orderID)
 	if err != nil {
 		return nil, err
 	}
-	counts := map[string]int{}
+	var counts []itemNeed
 	for _, item := range items {
-		counts[item.ProductID]++
+		found := false
+		for i := range counts {
+			if counts[i].ProductID == item.ProductID && counts[i].Size == item.Size {
+				counts[i].Count++
+				found = true
+				break
+			}
+		}
+		if !found {
+			counts = append(counts, itemNeed{ProductID: item.ProductID, Size: item.Size, Count: 1})
+		}
 	}
 	return counts, nil
 }
@@ -541,8 +562,17 @@ func (r *Repository) ReturnOrderStock(orderID string) error {
 	if err != nil {
 		return err
 	}
-	for id, n := range counts {
-		if _, err = r.DB.Exec(`UPDATE products SET stock = stock + ? WHERE id = ?`, n, id); err != nil {
+	for _, row := range counts {
+		if row.Size == "" {
+			if _, err = r.DB.Exec(`UPDATE products SET stock = stock + ? WHERE id = ?`, row.Count, row.ProductID); err != nil {
+				return err
+			}
+			continue
+		}
+		if _, err = r.DB.Exec(`UPDATE product_sizes SET stock = stock + ? WHERE product_id = ? AND size = ?`, row.Count, row.ProductID, row.Size); err != nil {
+			return err
+		}
+		if _, err = r.DB.Exec(`UPDATE products SET stock = (SELECT COALESCE(SUM(stock), 0) FROM product_sizes WHERE product_id = ?) WHERE id = ?`, row.ProductID, row.ProductID); err != nil {
 			return err
 		}
 	}
@@ -559,8 +589,19 @@ func (r *Repository) TakeOrderStock(orderID string) (bool, error) {
 		return false, err
 	}
 	defer tx.Rollback()
-	for id, n := range counts {
-		res, err := tx.Exec(`UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?`, n, id, n)
+	for _, row := range counts {
+		if row.Size == "" {
+			res, err := tx.Exec(`UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?`, row.Count, row.ProductID, row.Count)
+			if err != nil {
+				return false, err
+			}
+			got, _ := res.RowsAffected()
+			if got != 1 {
+				return false, nil
+			}
+			continue
+		}
+		res, err := tx.Exec(`UPDATE product_sizes SET stock = stock - ? WHERE product_id = ? AND size = ? AND stock >= ?`, row.Count, row.ProductID, row.Size, row.Count)
 		if err != nil {
 			return false, err
 		}
@@ -568,9 +609,48 @@ func (r *Repository) TakeOrderStock(orderID string) (bool, error) {
 		if got != 1 {
 			return false, nil
 		}
+		if _, err = tx.Exec(`UPDATE products SET stock = (SELECT COALESCE(SUM(stock), 0) FROM product_sizes WHERE product_id = ?) WHERE id = ?`, row.ProductID, row.ProductID); err != nil {
+			return false, err
+		}
 	}
 	if err = tx.Commit(); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+func (r *Repository) ProductSizes(productID string) ([]models.ProductSize, error) {
+	var rows []models.ProductSize
+	err := r.DB.Select(&rows, `SELECT product_id, size, stock FROM product_sizes WHERE product_id = ?`, productID)
+	return rows, err
+}
+
+func (r *Repository) SizeStock(productID, size string) (int, error) {
+	var n int
+	err := r.DB.Get(&n, `SELECT stock FROM product_sizes WHERE product_id = ? AND size = ?`, productID, size)
+	return n, err
+}
+
+func (r *Repository) ReplaceSizes(productID string, rows []models.ProductSize) error {
+	tx, err := r.DB.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec(`DELETE FROM product_sizes WHERE product_id = ?`, productID); err != nil {
+		return err
+	}
+	sum := 0
+	names := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if _, err = tx.Exec(`INSERT INTO product_sizes (product_id, size, stock) VALUES (?, ?, ?)`, productID, row.Size, row.Stock); err != nil {
+			return err
+		}
+		sum += row.Stock
+		names = append(names, row.Size)
+	}
+	if _, err = tx.Exec(`UPDATE products SET size = ?, stock = ? WHERE id = ?`, strings.Join(names, ", "), sum, productID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -228,6 +229,137 @@ func ensureOrderText(db *sqlx.DB) error {
 		  AND EXISTS (SELECT 1 FROM products WHERE products.id = order_items.product_id)
 	`)
 	return err
+}
+
+func sizeRank(name string) int {
+	order := []string{"XS", "S", "M", "L", "XL", "XXL"}
+	for i, item := range order {
+		if item == name {
+			return i
+		}
+	}
+	return len(order) + 1
+}
+
+func sortSizeNames(names []string) []string {
+	sorted := append([]string(nil), names...)
+	for i := 0; i < len(sorted); i++ {
+		for j := i + 1; j < len(sorted); j++ {
+			if sizeRank(sorted[j]) < sizeRank(sorted[i]) || (sizeRank(sorted[j]) == sizeRank(sorted[i]) && sorted[j] < sorted[i]) {
+				sorted[i], sorted[j] = sorted[j], sorted[i]
+			}
+		}
+	}
+	return sorted
+}
+
+// У одного товара несколько размеров, у каждого свой остаток.
+// Старый размер сохраняет своё количество, остальные стандартные размеры появляются с двумя штуками.
+func ensureProductSizes(db *sqlx.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS product_sizes (
+		product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+		size TEXT NOT NULL,
+		stock INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (product_id, size)
+	)`)
+	if err != nil {
+		return err
+	}
+	type row struct {
+		ID    string `db:"id"`
+		Size  string `db:"size"`
+		Stock int    `db:"stock"`
+	}
+	var products []row
+	if err = db.Select(&products, `
+		SELECT id, size, stock FROM products
+		WHERE NOT EXISTS (SELECT 1 FROM product_sizes ps WHERE ps.product_id = products.id)
+	`); err != nil {
+		return err
+	}
+	standard := []string{"XS", "S", "M", "L", "XL"}
+	for _, item := range products {
+		orig := strings.TrimSpace(item.Size)
+		if strings.Contains(orig, ",") {
+			orig = strings.TrimSpace(strings.Split(orig, ",")[0])
+		}
+		if orig == "" {
+			orig = "M"
+		}
+		if _, err = db.Exec(`INSERT INTO product_sizes (product_id, size, stock) VALUES (?, ?, ?)`, item.ID, orig, item.Stock); err != nil {
+			return err
+		}
+		for _, size := range standard {
+			if strings.EqualFold(size, orig) {
+				continue
+			}
+			if _, err = db.Exec(`INSERT INTO product_sizes (product_id, size, stock) VALUES (?, ?, ?)`, item.ID, size, 2); err != nil {
+				return err
+			}
+		}
+	}
+
+	ok, err := hasColumn(db, "cart", "size")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		if _, err = db.Exec(`ALTER TABLE cart ADD COLUMN size TEXT NOT NULL DEFAULT ''`); err != nil {
+			return err
+		}
+	}
+	if _, err = db.Exec(`
+		UPDATE cart SET size = (SELECT size FROM products WHERE products.id = cart.product_id)
+		WHERE size = ''
+		  AND EXISTS (
+			SELECT 1 FROM products
+			WHERE products.id = cart.product_id AND INSTR(products.size, ',') = 0 AND products.size != ''
+		  )
+	`); err != nil {
+		return err
+	}
+
+	ok, err = hasColumn(db, "order_items", "size")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		if _, err = db.Exec(`ALTER TABLE order_items ADD COLUMN size TEXT NOT NULL DEFAULT ''`); err != nil {
+			return err
+		}
+	}
+	if _, err = db.Exec(`
+		UPDATE order_items SET size = (SELECT size FROM products WHERE products.id = order_items.product_id)
+		WHERE size = ''
+		  AND EXISTS (
+			SELECT 1 FROM products
+			WHERE products.id = order_items.product_id AND INSTR(products.size, ',') = 0 AND products.size != ''
+		  )
+	`); err != nil {
+		return err
+	}
+
+	var ids []string
+	if err = db.Select(&ids, `SELECT id FROM products`); err != nil {
+		return err
+	}
+	for _, id := range ids {
+		var sizes []string
+		if err = db.Select(&sizes, `SELECT size FROM product_sizes WHERE product_id = ?`, id); err != nil {
+			return err
+		}
+		if len(sizes) == 0 {
+			continue
+		}
+		var sum int
+		if err = db.Get(&sum, `SELECT COALESCE(SUM(stock), 0) FROM product_sizes WHERE product_id = ?`, id); err != nil {
+			return err
+		}
+		if _, err = db.Exec(`UPDATE products SET size = ?, stock = ? WHERE id = ?`, strings.Join(sortSizeNames(sizes), ", "), sum, id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func ensureComment(db *sqlx.DB) error {

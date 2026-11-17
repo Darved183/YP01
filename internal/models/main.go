@@ -38,10 +38,17 @@ type User struct {
 	Password         string `json:"-" db:"password"`
 }
 
+type ProductSize struct {
+	ProductID string `json:"-" db:"product_id"`
+	Size      string `json:"size" db:"size"`
+	Stock     int    `json:"stock" db:"stock"`
+}
+
 type Cart struct {
 	ID        string `json:"id" db:"id"`
 	UserID    string `json:"user_id" db:"user_id"`
 	ProductID string `json:"product_id" db:"product_id"`
+	Size      string `json:"size" db:"size"`
 	Count     int    `json:"count" db:"count"`
 }
 
@@ -63,4 +70,5 @@ type OrderItem struct {
 	Description string  `json:"description" db:"description"`
 	Article     string  `json:"article" db:"article"`
 	Spec        string  `json:"spec" db:"spec"`
+	Size        string  `json:"size" db:"size"`
 }

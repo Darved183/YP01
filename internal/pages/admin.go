@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"YP01/internal/database"
@@ -97,9 +96,13 @@ func (s *Pages) fillProductForm(p *page) error {
 	}
 	if p.Product != nil {
 		keepValue(p.Fields, "type", p.Product.Type)
-		keepValue(p.Fields, "size", p.Product.Size)
 		keepValue(p.Fields, "color", p.Product.Color)
 	}
+	id := ""
+	if p.Product != nil {
+		id = p.Product.ID
+	}
+	p.Sizes = s.sizeForm(id)
 	if p.Product != nil && p.Product.ID != "" {
 		photos, err := s.Repo.PhotosByProduct(p.Product.ID)
 		if err != nil {
@@ -125,9 +128,23 @@ func (s *Pages) ProductSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	prod, msg := readProduct(r)
+	sizes, sizeMsg := readSizes(r)
+	if msg == "" {
+		msg = sizeMsg
+	}
 	if err := s.sameAsCatalog(&prod); err != nil {
 		s.fail(w, p, "Ошибка", "Не получилось прочитать списки", err)
 		return
+	}
+	if msg == "" {
+		names := make([]string, 0, len(sizes))
+		sum := 0
+		for _, row := range sizes {
+			names = append(names, row.Size)
+			sum += row.Stock
+		}
+		prod.Size = strings.Join(names, ", ")
+		prod.Stock = sum
 	}
 	p.Product = &prod
 	p.Editing = prod.ID != ""
@@ -135,6 +152,7 @@ func (s *Pages) ProductSave(w http.ResponseWriter, r *http.Request) {
 		p.Title = "Товар"
 		p.Error = msg
 		_ = s.fillProductForm(&p)
+		p.Sizes = formSizes(r)
 		s.render(w, "product_form", p)
 		return
 	}
@@ -146,10 +164,14 @@ func (s *Pages) ProductSave(w http.ResponseWriter, r *http.Request) {
 			err = s.Repo.PutProduct(&prod)
 		}
 	}
+	if err == nil {
+		err = s.Repo.ReplaceSizes(prod.ID, sizes)
+	}
 	if err != nil {
 		p.Title = "Товар"
 		p.Error = "Не получилось сохранить товар"
 		_ = s.fillProductForm(&p)
+		p.Sizes = formSizes(r)
 		s.render(w, "product_form", p)
 		return
 	}
@@ -172,7 +194,6 @@ func readProduct(r *http.Request) (models.Product, string) {
 		Name:        strings.TrimSpace(r.FormValue("name")),
 		Type:        strings.TrimSpace(r.FormValue("type")),
 		Gender:      strings.TrimSpace(r.FormValue("gender")),
-		Size:        strings.TrimSpace(r.FormValue("size")),
 		Color:       strings.TrimSpace(r.FormValue("color")),
 		Brand:       strings.TrimSpace(r.FormValue("brand")),
 		Season:      strings.TrimSpace(r.FormValue("season")),
@@ -181,22 +202,17 @@ func readProduct(r *http.Request) (models.Product, string) {
 	if p.Name == "" || p.Gender == "" || p.Brand == "" || p.Season == "" {
 		return p, "Заполните все поля товара"
 	}
-	if p.Type == "" || p.Size == "" || p.Color == "" {
-		return p, "Выберите тип, размер и цвет"
+	if p.Type == "" || p.Color == "" {
+		return p, "Выберите тип и цвет"
 	}
-	if longText(p.Type, 40) || longText(p.Size, 40) || longText(p.Color, 40) {
-		return p, "Тип, размер и цвет не длиннее 40 символов"
+	if longText(p.Type, 40) || longText(p.Color, 40) {
+		return p, "Тип и цвет не длиннее 40 символов"
 	}
 	price, ok := parsePrice(r.FormValue("price"))
 	if !ok {
 		return p, "Укажите корректную цену"
 	}
 	p.Price = price
-	stock, err := strconv.Atoi(strings.TrimSpace(r.FormValue("stock")))
-	if err != nil || stock < 0 || stock > 1000000 {
-		return p, "Укажите, сколько штук на складе"
-	}
-	p.Stock = stock
 	runes := []rune(p.Description)
 	if len(runes) > 1000 {
 		p.Description = string(runes[:1000])
@@ -236,7 +252,6 @@ func (s *Pages) sameAsCatalog(p *models.Product) error {
 		dest *string
 	}{
 		{"type", &p.Type},
-		{"size", &p.Size},
 		{"color", &p.Color},
 	}
 	for _, item := range pairs {

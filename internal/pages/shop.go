@@ -46,7 +46,11 @@ func (s *Pages) fillCart(p *page) {
 			row.Article = item.Article
 			row.Color = item.Color
 			row.Brand = item.Brand
-			row.Meta = item.Size + " · " + item.Color + " · " + money(item.Price)
+			size := line.Size
+			if size == "" {
+				size = item.Size
+			}
+			row.Meta = size + " · " + item.Color + " · " + money(item.Price)
 			photos, photoErr := s.Repo.PhotosByProduct(item.ID)
 			if photoErr == nil {
 				for _, photo := range photos {
@@ -58,11 +62,13 @@ func (s *Pages) fillCart(p *page) {
 				}
 			}
 			row.Price = money(item.Price)
-			var others int
-			_ = s.Repo.DB.Get(&others, `SELECT COALESCE(SUM(count),0) FROM cart WHERE product_id = ? AND user_id != ?`, item.ID, p.User.ID)
-			if line.Count > item.Stock-others {
+			stock := item.Stock
+			if n, stockErr := s.Repo.SizeStock(item.ID, line.Size); stockErr == nil {
+				stock = n
+			}
+			if line.Count > stock {
 				p.Broken = true
-				row.Meta = item.Size + " · " + item.Color + " · на складе " + strconv.Itoa(item.Stock)
+				row.Meta = size + " · " + item.Color + " · на складе " + strconv.Itoa(stock)
 			}
 			sum := item.Price * float64(line.Count)
 			row.Sum = money(sum)
@@ -92,13 +98,19 @@ func (s *Pages) CartAdd(w http.ResponseWriter, r *http.Request) {
 		goTo(w, r, back)
 		return
 	}
+	size := strings.TrimSpace(r.FormValue("size"))
+	if _, err := s.Repo.SizeStock(productID, size); err != nil {
+		setFlash(w, "Выберите размер")
+		goTo(w, r, back)
+		return
+	}
 	count, _ := strconv.Atoi(r.FormValue("count"))
 	if count < 1 {
 		count = 1
 	}
-	left := s.freeFor(productID, p.User.ID)
+	left := s.freeFor(productID, size, p.User.ID)
 	if left < 1 {
-		setFlash(w, "Этого товара нет в наличии")
+		setFlash(w, "Этого размера нет в наличии")
 		goTo(w, r, back)
 		return
 	}
@@ -114,14 +126,14 @@ func (s *Pages) CartAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, line := range lines {
-		if line.ProductID == productID {
+		if line.ProductID == productID && line.Size == size {
 			line.Count += count
 			_ = s.Repo.PutCart(&line)
 			goTo(w, r, back)
 			return
 		}
 	}
-	err = s.Repo.CreateCart(&models.Cart{UserID: p.User.ID, ProductID: productID, Count: count})
+	err = s.Repo.CreateCart(&models.Cart{UserID: p.User.ID, ProductID: productID, Size: size, Count: count})
 	if err != nil {
 		setFlash(w, "Не получилось положить товар в корзину")
 	}
@@ -156,7 +168,7 @@ func (s *Pages) CartCount(w http.ResponseWriter, r *http.Request) {
 			_ = s.Repo.PutCart(line)
 		}
 	} else {
-		if s.freeFor(line.ProductID, p.User.ID) < 1 {
+		if s.freeFor(line.ProductID, line.Size, p.User.ID) < 1 {
 			setFlash(w, "Больше нет на складе")
 		} else {
 			line.Count++
@@ -212,9 +224,9 @@ func (s *Pages) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type piece struct {
-		id, name string
-		price    float64
-		count    int
+		id, name, size, color, description, article string
+		price                                       float64
+		count                                       int
 	}
 	var pieces []piece
 	for _, line := range lines {
@@ -228,12 +240,25 @@ func (s *Pages) Checkout(w http.ResponseWriter, r *http.Request) {
 		if n < 1 {
 			n = 1
 		}
-		if n > item.Stock {
-			setFlash(w, "«"+item.Name+"» на складе только "+strconv.Itoa(item.Stock))
+		stock, err := s.Repo.SizeStock(item.ID, line.Size)
+		label := item.Name
+		if line.Size != "" {
+			label += " (" + line.Size + ")"
+		}
+		if err != nil || line.Size == "" {
+			setFlash(w, "«"+label+"»: выберите размер заново")
 			goTo(w, r, "/cart")
 			return
 		}
-		pieces = append(pieces, piece{id: item.ID, name: item.Name, price: item.Price, count: n})
+		if n > stock {
+			setFlash(w, "«"+label+"» на складе только "+strconv.Itoa(stock))
+			goTo(w, r, "/cart")
+			return
+		}
+		pieces = append(pieces, piece{
+			id: item.ID, name: item.Name, size: line.Size, color: item.Color,
+			description: item.Description, article: item.Article, price: item.Price, count: n,
+		})
 	}
 	tx, err := s.Repo.DB.Beginx()
 	if err != nil {
@@ -243,7 +268,10 @@ func (s *Pages) Checkout(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 	for _, piece := range pieces {
-		res, err := tx.Exec(`UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?`, piece.count, piece.id, piece.count)
+		res, err := tx.Exec(
+			`UPDATE product_sizes SET stock = stock - ? WHERE product_id = ? AND size = ? AND stock >= ?`,
+			piece.count, piece.id, piece.size, piece.count,
+		)
 		if err != nil {
 			setFlash(w, "Не получилось оформить заказ")
 			goTo(w, r, "/cart")
@@ -251,7 +279,15 @@ func (s *Pages) Checkout(w http.ResponseWriter, r *http.Request) {
 		}
 		got, _ := res.RowsAffected()
 		if got != 1 {
-			setFlash(w, "«"+piece.name+"» уже разобрали")
+			setFlash(w, "«"+piece.name+"» ("+piece.size+") уже разобрали")
+			goTo(w, r, "/cart")
+			return
+		}
+		if _, err = tx.Exec(
+			`UPDATE products SET stock = (SELECT COALESCE(SUM(stock), 0) FROM product_sizes WHERE product_id = ?) WHERE id = ?`,
+			piece.id, piece.id,
+		); err != nil {
+			setFlash(w, "Не получилось оформить заказ")
 			goTo(w, r, "/cart")
 			return
 		}
@@ -277,10 +313,11 @@ func (s *Pages) Checkout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, piece := range pieces {
+		spec := piece.size + " · " + piece.color
 		for i := 0; i < piece.count; i++ {
 			_, err = tx.Exec(
-				`INSERT INTO order_items (id, order_id, product_id, price) VALUES (?, ?, ?, ?)`,
-				uuid.NewString(), orderID, piece.id, piece.price,
+				`INSERT INTO order_items (id, order_id, product_id, price, name, description, article, spec, size) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				uuid.NewString(), orderID, piece.id, piece.price, piece.name, piece.description, piece.article, spec, piece.size,
 			)
 			if err != nil {
 				setFlash(w, "Не получилось записать состав заказа")
@@ -305,18 +342,18 @@ func (s *Pages) Checkout(w http.ResponseWriter, r *http.Request) {
 
 // Сколько ещё этот клиент может положить в корзину. Чужие корзины склад не занимают:
 // число на карточке уменьшается только когда заказ уже оформлен.
-func (s *Pages) freeFor(productID, userID string) int {
-	item, err := s.Repo.GetProductByID(productID)
-	if err != nil || item.Stock < 1 {
+func (s *Pages) freeFor(productID, size, userID string) int {
+	stock, err := s.Repo.SizeStock(productID, size)
+	if err != nil || stock < 1 {
 		return 0
 	}
 	var mine int
 	if userID != "" {
-		if err = s.Repo.DB.Get(&mine, `SELECT COALESCE(SUM(count),0) FROM cart WHERE product_id = ? AND user_id = ?`, productID, userID); err != nil {
+		if err = s.Repo.DB.Get(&mine, `SELECT COALESCE(SUM(count),0) FROM cart WHERE product_id = ? AND size = ? AND user_id = ?`, productID, size, userID); err != nil {
 			return 0
 		}
 	}
-	left := item.Stock - mine
+	left := stock - mine
 	if left < 0 {
 		return 0
 	}
@@ -424,8 +461,14 @@ func (s *Pages) fillGroup(g *itemGroup, item models.OrderItem) {
 	if g.Article == "" {
 		g.Article = prod.Article
 	}
-	if g.Spec == "" && (prod.Size != "" || prod.Color != "") {
-		g.Spec = prod.Size + " · " + prod.Color
+	if g.Spec == "" {
+		size := item.Size
+		if size == "" {
+			size = prod.Size
+		}
+		if size != "" || prod.Color != "" {
+			g.Spec = size + " · " + prod.Color
+		}
 	}
 	g.Color = prod.Color
 	g.Brand = prod.Brand
@@ -493,7 +536,7 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 		sum += item.Price
 		found := false
 		for i := range p.Groups {
-			if p.Groups[i].ProductID == item.ProductID && p.Groups[i].Price == money(item.Price) {
+			if p.Groups[i].ProductID == item.ProductID && p.Groups[i].Price == money(item.Price) && p.Groups[i].Size == item.Size {
 				p.Groups[i].Count++
 				found = true
 				break
@@ -502,7 +545,7 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 		if found {
 			continue
 		}
-		g := itemGroup{ProductID: item.ProductID, Price: money(item.Price), Count: 1}
+		g := itemGroup{ProductID: item.ProductID, Price: money(item.Price), Count: 1, Size: item.Size}
 		s.fillGroup(&g, item)
 		p.Groups = append(p.Groups, g)
 	}
@@ -511,7 +554,7 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 		price := 0.0
 		itemsSame := 0
 		for _, item := range items {
-			if item.ProductID == p.Groups[i].ProductID && money(item.Price) == p.Groups[i].Price {
+			if item.ProductID == p.Groups[i].ProductID && money(item.Price) == p.Groups[i].Price && item.Size == p.Groups[i].Size {
 				price = item.Price
 				itemsSame++
 			}

@@ -2,6 +2,7 @@ package pages
 
 import (
 	"net/http"
+	"strings"
 
 	"YP01/internal/database"
 	"YP01/internal/models"
@@ -68,25 +69,23 @@ func (s *Pages) Catalog(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, p, "Ошибка", "Не получилось прочитать каталог", err)
 		return
 	}
-	inCart := map[string]models.Cart{}
-	if p.Key == "client" && p.User != nil {
-		lines, err := s.Repo.GetCartByUser(p.User.ID)
-		if err == nil {
-			for _, line := range lines {
-				inCart[line.ProductID] = line
-			}
-		}
-	}
 	for _, item := range products {
 		c := s.cardOf(item)
 		userID := ""
 		if p.User != nil {
 			userID = p.User.ID
 		}
-		c.Left = s.freeFor(item.ID, userID)
-		if line, ok := inCart[item.ID]; ok {
-			c.InCart = line.Count
-			c.CartID = line.ID
+		c.Sizes = s.sizeOffers(item.ID, userID, "")
+		if len(c.Sizes) > 0 {
+			names := make([]string, 0, len(c.Sizes))
+			stock := 0
+			for _, ch := range c.Sizes {
+				names = append(names, ch.Name)
+				stock += ch.Stock
+			}
+			c.Size = strings.Join(names, ", ")
+			c.Stock = stock
+			c.Left = stock
 		}
 		p.Cards = append(p.Cards, c)
 	}
@@ -133,19 +132,7 @@ func (s *Pages) Product(w http.ResponseWriter, r *http.Request) {
 	if p.User != nil {
 		userID = p.User.ID
 	}
-	p.Available = s.freeFor(item.ID, userID)
-	if p.Key == "client" && p.User != nil {
-		lines, err := s.Repo.GetCartByUser(p.User.ID)
-		if err == nil {
-			for _, line := range lines {
-				if line.ProductID == item.ID {
-					p.InCart = line.Count
-					p.CartID = line.ID
-					break
-				}
-			}
-		}
-	}
+	p.Sizes = s.sizeOffers(item.ID, userID, r.URL.Query().Get("size"))
 	photos, err := s.Repo.PhotosByProduct(item.ID)
 	if err != nil {
 		s.fail(w, p, "Ошибка", "Не получилось открыть товар", err)

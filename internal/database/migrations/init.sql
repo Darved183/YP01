@@ -38,10 +38,18 @@ CREATE TABLE IF NOT EXISTS photos (
     product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS product_sizes (
+    product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    size       TEXT NOT NULL,
+    stock      INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (product_id, size)
+);
+
 CREATE TABLE IF NOT EXISTS cart (
     id         TEXT PRIMARY KEY,
     user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    size       TEXT NOT NULL DEFAULT '',
     count      INTEGER NOT NULL DEFAULT 1
 );
 
@@ -62,7 +70,8 @@ CREATE TABLE IF NOT EXISTS order_items (
     name        TEXT NOT NULL DEFAULT '',
     description TEXT NOT NULL DEFAULT '',
     article     TEXT NOT NULL DEFAULT '',
-    spec        TEXT NOT NULL DEFAULT ''
+    spec        TEXT NOT NULL DEFAULT '',
+    size        TEXT NOT NULL DEFAULT ''
 );
 
 CREATE INDEX IF NOT EXISTS idx_products_type   ON products(type);
