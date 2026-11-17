@@ -468,6 +468,9 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 	p.OrderRef = orderRef(order.Number, order.ID)
 	p.Comment = order.Comment
 	p.CanCancel = !p.Staff && order.Status != "Отменён" && order.Status != "Готов к выдаче"
+	if p.CanCancel {
+		p.Reasons = cancelReasons()
+	}
 	p.When = formatDate(order.DateTime)
 	if p.Staff {
 		p.Hint = "Здесь можно сменить статус."
@@ -602,15 +605,11 @@ func (s *Pages) OrderCancel(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	comment := strings.TrimSpace(r.FormValue("comment"))
-	if comment == "" {
-		setFlash(w, "Напишите, почему отменяете заказ")
+	comment, ok := cancelComment(r.FormValue("reason"), r.FormValue("comment"))
+	if !ok {
+		setFlash(w, comment)
 		goTo(w, r, "/orders/"+ref)
 		return
-	}
-	runes := []rune(comment)
-	if len(runes) > 500 {
-		comment = string(runes[:500])
 	}
 	if err = s.Repo.ReturnOrderStock(order.ID); err != nil {
 		setFlash(w, "Не получилось вернуть товар на склад")
@@ -633,6 +632,38 @@ func orderRef(number int, id string) string {
 		return strconv.Itoa(number)
 	}
 	return id
+}
+
+func cancelReasons() []string {
+	return []string{
+		"Передумал покупать",
+		"Ошибся с размером или цветом",
+		"Заказал по ошибке",
+		"Слишком долго ждать",
+		"Другое",
+	}
+}
+
+// Готовую причину пишем как есть. «Другое» требует свой текст.
+func cancelComment(reason, own string) (string, bool) {
+	reason = strings.TrimSpace(reason)
+	if reason == "Другое" {
+		own = strings.TrimSpace(own)
+		if own == "" {
+			return "Напишите свою причину", false
+		}
+		runes := []rune(own)
+		if len(runes) > 500 {
+			own = string(runes[:500])
+		}
+		return own, true
+	}
+	for _, item := range cancelReasons() {
+		if item == reason {
+			return reason, true
+		}
+	}
+	return "Выберите причину отмены", false
 }
 
 func staffStatuses() []string {

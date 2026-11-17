@@ -241,6 +241,7 @@ label {
   font-size: .82rem;
   font-weight: 650;
 }
+label[hidden] { display: none; }
 label.check {
   display: flex;
   align-items: flex-start;

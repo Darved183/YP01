@@ -20,7 +20,7 @@
       {{end}}
     </div>
     {{if .Comment}}
-      <p><span class="muted small">Комментарий к отмене</span><br>{{.Comment}}</p>
+      <p><span class="muted small">Причина отмены</span><br>{{.Comment}}</p>
     {{end}}
   </div>
   <div class="table-wrap">
@@ -63,7 +63,13 @@
   <p class="muted small">Цена зафиксирована на момент покупки.</p>
   {{if .CanCancel}}
     <form class="panel stack" method="post" action="/orders/{{.OrderRef}}/cancel">
-      <label>Комментарий<textarea name="comment" required maxlength="500" placeholder="Почему отменяете заказ"></textarea></label>
+      <label>Причина отмены
+        <select name="reason" required onchange="var box=this.form.querySelector('[data-other]'); var on=this.value==='Другое'; box.hidden=!on; var field=box.querySelector('input'); field.required=on; if(!on) field.value=''">
+          <option value="">Выберите</option>
+          {{range .Reasons}}<option>{{.}}</option>{{end}}
+        </select>
+      </label>
+      <label data-other hidden>Свой вариант<input name="comment" maxlength="500" placeholder="Напишите причину"></label>
       <button class="btn danger" type="submit">Отменить заказ</button>
     </form>
   {{end}}
