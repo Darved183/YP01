@@ -335,6 +335,7 @@ func (s *Pages) Orders(w http.ResponseWriter, r *http.Request) {
 	if p.Staff {
 		p.Title = "Заказы"
 		p.Hint = ""
+		p.Reasons = shopCancelReasons()
 	} else {
 		p.Title = "Мои заказы"
 		p.Hint = "Только ваши заказы. Статус меняет магазин."
@@ -475,6 +476,7 @@ func (s *Pages) Order(w http.ResponseWriter, r *http.Request) {
 	if p.Staff {
 		p.Hint = "Здесь можно сменить статус."
 		p.Statuses = staffStatuses()
+		p.Reasons = shopCancelReasons()
 	}
 	if buyer, err := s.Repo.GetUser(order.UserID); err == nil {
 		p.Buyer = buyerLine(buyer.Name, buyer.Number)
@@ -553,11 +555,18 @@ func (s *Pages) OrderStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if status == "Отменён" {
+		comment, ok := cancelComment(r.FormValue("reason"), r.FormValue("comment"), shopCancelReasons())
+		if !ok {
+			setFlash(w, comment)
+			goTo(w, r, "/orders/"+ref)
+			return
+		}
 		if err = s.Repo.ReturnOrderStock(order.ID); err != nil {
 			setFlash(w, "Не получилось вернуть товар на склад")
 			goTo(w, r, "/orders/"+ref)
 			return
 		}
+		order.Comment = comment
 	}
 	if prev == "Отменён" {
 		ok, err := s.Repo.TakeOrderStock(order.ID)
@@ -566,6 +575,9 @@ func (s *Pages) OrderStatus(w http.ResponseWriter, r *http.Request) {
 			goTo(w, r, "/orders/"+ref)
 			return
 		}
+	}
+	if status != "Отменён" {
+		order.Comment = ""
 	}
 	order.Status = status
 	if err = s.Repo.PutOrder(order); err != nil {
@@ -605,7 +617,7 @@ func (s *Pages) OrderCancel(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad form", http.StatusBadRequest)
 		return
 	}
-	comment, ok := cancelComment(r.FormValue("reason"), r.FormValue("comment"))
+	comment, ok := cancelComment(r.FormValue("reason"), r.FormValue("comment"), cancelReasons())
 	if !ok {
 		setFlash(w, comment)
 		goTo(w, r, "/orders/"+ref)
@@ -651,13 +663,23 @@ func cancelReasons() []string {
 	}
 }
 
+func shopCancelReasons() []string {
+	return []string{
+		"Не удалось связаться с клиентом",
+		"Товар закончился на складе",
+		"Клиент не оплатил заказ",
+		"Клиент попросил отменить заказ",
+		"Другое",
+	}
+}
+
 // Готовую причину пишем как есть. «Другое» требует свой текст.
-func cancelComment(reason, own string) (string, bool) {
+func cancelComment(reason, own string, allowed []string) (string, bool) {
 	reason = strings.TrimSpace(reason)
 	if reason == "Другое" {
 		own = strings.TrimSpace(own)
 		if own == "" {
-			return "Напишите свою причину", false
+			return "Напишите комментарий", false
 		}
 		runes := []rune(own)
 		if len(runes) > 500 {
@@ -665,7 +687,7 @@ func cancelComment(reason, own string) (string, bool) {
 		}
 		return own, true
 	}
-	for _, item := range cancelReasons() {
+	for _, item := range allowed {
 		if item == reason {
 			return reason, true
 		}

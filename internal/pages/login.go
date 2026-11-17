@@ -66,8 +66,8 @@ func (s *Pages) RegisterPost(w http.ResponseWriter, r *http.Request) {
 		msg = "Имя должно быть от 2 до 80 символов"
 	} else if !validEmail(email) {
 		msg = "Некорректная почта"
-	} else if len(phone) < 5 {
-		msg = "Укажите телефон"
+	} else if !validPhone(phone) {
+		msg = "Телефон: +7 и ещё 10 цифр"
 	} else if len(pass) < 4 {
 		msg = "Пароль должен быть не короче 4 символов"
 	} else if pass != again {

@@ -47,12 +47,22 @@
                 {{if and $.Staff (gt (len .Next) 1)}}
                   <form method="post" action="/orders/{{.Ref}}/status">
                     <input type="hidden" name="back" value="/orders">
-                    <select name="status" aria-label="Статус заказа" data-prev="{{.Status}}" onfocus="this.dataset.prev=this.value" onchange="if(!confirm('Сменить статус заказа?')){this.value=this.dataset.prev;return}this.form.requestSubmit()">
+                    <select name="status" aria-label="Статус заказа" data-prev="{{.Status}}" onfocus="if(this.form.querySelector('[data-cancel]')&&!this.form.querySelector('[data-cancel]').hidden)return;this.dataset.prev=this.value" onchange="shopStatus(this)">
                       {{$st := .Status}}
                       {{range .Next}}
                         <option value="{{.}}"{{if eq . $st}} selected{{end}}>{{.}}</option>
                       {{end}}
                     </select>
+                    <div data-cancel hidden>
+                      <label>Причина отмены
+                        <select name="reason" onchange="var box=this.form.querySelector('[data-other]'); var on=this.value==='Другое'; box.hidden=!on; var field=box.querySelector('input'); field.required=on; if(!on) field.value=''">
+                          <option value="">Выберите</option>
+                          {{range $.Reasons}}<option>{{.}}</option>{{end}}
+                        </select>
+                      </label>
+                      <label data-other hidden>Комментарий<input name="comment" maxlength="500" placeholder="Напишите комментарий"></label>
+                      <button class="btn danger small" type="submit">Отменить заказ</button>
+                    </div>
                   </form>
                 {{else}}
                   <span class="status" data-status="{{.Status}}">{{.Status}}</span>

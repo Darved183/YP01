@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#f4f6f8">
   <title>{{.Title}} — KeptShop</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect rx='8' fill='%2312141a' width='32' height='32'/%3E%3Ctext x='16' y='21' text-anchor='middle' fill='%23ffffff' font-size='15' font-family='Segoe UI,sans-serif' font-weight='700'%3EK%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/app.css?v=10">
+  <link rel="stylesheet" href="/static/app.css?v=11">
 </head>
 <body>
 <div class="shell">
@@ -73,7 +73,32 @@
     var reason = document.querySelector("select[name=reason]");
     if (reason && reason.value) return true;
     var own = document.querySelector("[data-other] input");
-    return !!(own && own.value.trim());
+    if (own && own.value.trim()) return true;
+    return !!document.querySelector("[data-cancel]:not([hidden])");
+  }
+  function shopStatus(sel) {
+    var box = sel.form.querySelector("[data-cancel]");
+    if (box) {
+      var on = sel.value === "Отменён" && sel.value !== sel.dataset.prev;
+      box.hidden = !on;
+      var reason = box.querySelector("[name=reason]");
+      if (reason) reason.required = on;
+      if (!on) {
+        var own = box.querySelector("[data-other]");
+        if (own) {
+          own.hidden = true;
+          var field = own.querySelector("input");
+          if (field) { field.required = false; field.value = ""; }
+        }
+        if (reason) reason.value = "";
+      }
+      if (on) return;
+    }
+    if (!confirm("Сменить статус заказа?")) {
+      sel.value = sel.dataset.prev;
+      return;
+    }
+    sel.form.requestSubmit();
   }
   function shopPull() {
     if (shopBusy()) return;
